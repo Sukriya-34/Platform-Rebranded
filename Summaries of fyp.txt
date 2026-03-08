@@ -1,0 +1,14 @@
+1. installing for backend
+a. mkdir server(created folder)
+b. npm init -y (creates package.json file)
+c. npm install express pg cors dotenv
+express: Handles your routes.
+
+pg: Connects to PostgreSQL.
+
+cors: Lets your frontend talk to the server.
+
+dotenv: Protects your database "passwords".
+d. npm install bcryptjs(for user passwords)-security tool
+
+e. npm install -D nodemon
