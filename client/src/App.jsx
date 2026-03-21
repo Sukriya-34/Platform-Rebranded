@@ -1,34 +1,25 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
-
+import Signup from "./Pages/Signup";
+import Login from "./Pages/Login";
+import ForgotPassword from "./Pages/ForgotPassword";
 function App() {
-  const [count, setCount] = useState(0);
+  // 1. We look at the web browser's search bar to see what the path is
+  const currentPath = window.location.pathname;
+  //set up a variable to hold the page we want to show
+  let CurrentPage;
 
+  // We check the URL and assign the correct page component
+  if (currentPath === "/login") {
+    CurrentPage = Login;
+  } else if (currentPath === "/forgot-password") {
+    CurrentPage = ForgotPassword;
+  } else {
+    CurrentPage = Signup;
+  }
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="w-full h-full">
+      {/* {currentPath === "/login" ? <Login /> : <Signup />} */}
+      <CurrentPage />
+    </div>
   );
 }
 

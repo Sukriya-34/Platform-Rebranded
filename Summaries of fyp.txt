@@ -11,4 +11,46 @@ cors: Lets your frontend talk to the server.
 dotenv: Protects your database "passwords".
 d. npm install bcryptjs(for user passwords)-security tool
 
-e. npm install -D nodemon
+e. npm install -D nodemon(installing the auto-restart tool)
+
+**git push**
+# 1. Stage all changes (ignores files in .gitignore like .env)
+git add .
+
+# 2. Save the snapshot with a clear message
+git commit -m "Your descriptive message here"
+
+# 3. Upload to GitHub
+git push
+
+
+**the setup commands only used once**
+# Initialize a new local repository
+git init
+
+# Link your local folder to a GitHub repository
+git remote add origin https://github.com/your-username/your-repo-name.git
+
+# Rename the default branch to 'main'
+git branch -M main
+
+# First push to link the branch
+git push -u origin main
+
+**3. "Checking In" (Status and History)**
+# Check which files are changed or untracked
+git status
+
+# See a short list of your commit history
+git log --oneline
+
+# List all branches (the one with the * is your current one)
+git branch**
+# Check which files are changed or untracked
+git status
+
+# See a short list of your commit history
+git log --oneline
+
+# List all branches (the one with the * is your current one)
+git branch
