@@ -42,7 +42,7 @@ const Signup = () => {
           RIGHT SIDE: THE SIGNUP FORM
           ========================================= */}
       <div className="w-full lg:w-1/2 h-full flex justify-center items-center px-8 sm:px-16 bg-porcelain overflow-y-auto">
-        {/* Maximum width of the form area to keep it contained (max-w-md = 400px) */}
+        {/* Maximum width of the form arecdto keep it contained (max-w-md = 400px) */}
         <div className="w-full max-w-md py-8">
           {" "}
           {/* Form Header */}
