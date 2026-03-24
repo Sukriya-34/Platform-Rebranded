@@ -1,19 +1,29 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-
 }
 
+//create a strict list of allowed roles
+enum UserRole {
+  Learner
+  ContentCreator
+  Admin
+}
+
+
+
 model User {
-  id             Int      @id @default(autoincrement())
-  fullName       String
-  personalEmail  String   @unique
-  platformEmail  String?  @unique
-  password       String
-  role           String   @default("Learner")
-  createdAt      DateTime @default(now())
+  id            Int     @id @default(autoincrement())
+  fullName      String  
+  personalEmail String  @unique
+  platformEmail  String  @unique
+  password      String
+
+  role          UserRole @default(Learner)
+  createdAt     DateTime @default(now())
+
 }
