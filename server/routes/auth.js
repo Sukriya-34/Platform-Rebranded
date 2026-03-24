@@ -6,6 +6,8 @@ import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+import jwt from "jsonwebtoken";
+
 dotenv.config();
 
 const { Pool } = pg;
@@ -30,17 +32,25 @@ router.post("/register", async (req, res) => {
     });
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!emailRegex.test(email)){
+    console.log("Rejected: Invalid email format!");
+    return res.status(400).json({ message: "Please provide a valid email format!" });
+  }
+
   try {
     const prismaRole = role ? role.replace(/\s+/g, "") : "Learner";
 
-    // 1. Generate the new Platform Email
-    // Example: If John Doe signs up as a learner, it becomes "john.learner@platform.com"
-    const firstName = fullName.split(" ")[0].toLowerCase();
+    //generate new email
+    const nameParts = fullName.trim().split(" ");
+    const firstName = nameParts[0].toLowerCase();
 
-    //This removes spaces just in case (e.g., "Content Creator" -> "contentcreator")
-    const formattedRole = prismaRole.toLowerCase();
-    const platformEmail = `${firstName}.${formattedRole}@platform.com`;
+    const lastName =
+      nameParts.length > 1
+        ? "." + nameParts[nameParts.length - 1].toLowerCase()
+        : "";
 
+    const platformEmail = `${firstName}${lastName}@pltfrmX.com`;
     const existingUser = await prisma.user.findFirst({
       where: { personalEmail: email },
     });
@@ -82,6 +92,62 @@ router.post("/register", async (req, res) => {
   } catch (err) {
     console.error("Registration Error: ", err.message);
     res.status(500).json({ error: "Server error during registration" });
+  }
+});
+
+//login Route
+router.post("/login", async (req, res) => {
+  console.log("LOGIN ATTEMPT:", req.body);
+
+  const { email, password } = req.body;
+
+  //check if the data is valid
+  if (!email || !password) {
+    return res
+      .status(400)
+      .json({ message: "Please provide both email and password!" });
+  }
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: { personalEmail: email },
+    });
+
+    //if no user is fouund
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    //compare typed pass with hashed db pass
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials!" });
+    }
+
+    //generate digital vip pass(jwt)
+    const token = jwt.sign(
+      { id: user.id, role: user.role, platformEmail: user.platformEmail },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }, // the pass expires in 1 day
+    );
+
+    console.log(`SUCCESS: ${user.fullName} logged in!`);
+
+    //send the pass and user info back to the frontend
+    res.status(200).json({
+      message: "Logged in successfully!",
+      token: token,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        platformEmail: user.platformEmail,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Login Error: ", err.message);
+    res.status(500).json({ error: "Server error during login" });
   }
 });
 
