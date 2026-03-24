@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 //vite handles import automatically. make sure you named your image 'auth-illustration.png'
 import illustration from "../assets/auth-illustration.png";
+import { registerUser } from "../api/auth";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -9,6 +10,10 @@ const Signup = () => {
     password: "",
   });
 
+  const [loading, setLoading] = useState(false);
+  const[message, setMessage] = useState(null);
+  const[error, setError] = useState(null);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -16,18 +21,31 @@ const Signup = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  //fetch function that sends data to your express bakecnd
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
     console.log("Sending to backend:", formData);
-  };
+  
+
+  try {
+    const data = await registerUser(formData); 
+    setMessage(`Success! Your new email is: ${data.assignedEmail}`);
+    setFormData({ fullName: "", email: "", password: "" });
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     // MAIN WRAPPER: Takes up full screen height (h-screen) and width (w-full).
     // Uses Poppins as default font, Ink Black as default text color.
     <div className="flex h-screen w-full overflow-hidden font-poppins text-ink-black bg-porcelain">
-      {/* =========================================
-          LEFT SIDE: THE ILLUSTRATION (Desktop Only)
-          ========================================= */}
+      {/* LEFT SIDE: THE ILLUSTRATION (Desktop Only)*/}
 
       <div className="relative hidden lg:flex w-1/2 h-full bg-soft-periwinkle justify-center items-center">
         {/* We removed the old containment classes. The image now fills the column. */}
@@ -38,9 +56,7 @@ const Signup = () => {
         />
       </div>
 
-      {/* =========================================
-          RIGHT SIDE: THE SIGNUP FORM
-          ========================================= */}
+      {/* RIGHT SIDE: THE SIGNUP FORM*/}
       <div className="w-full lg:w-1/2 h-full flex justify-center items-center px-8 sm:px-16 bg-porcelain overflow-y-auto">
         {/* Maximum width of the form arecdto keep it contained (max-w-md = 400px) */}
         <div className="w-full max-w-md py-8">
@@ -143,9 +159,7 @@ const Signup = () => {
               Create account
             </button>
           </form>
-          {/* =========================================
-              SOCIAL LOGIN & FOOTER
-              ========================================= */}
+          {/* SOCIAL LOGIN & FOOTER*/}
           {/* The "OR" divider line */}
           <div className="flex items-center my-8">
             <div className="grow border-t border-warm-taupe"></div>
