@@ -19,11 +19,14 @@ enum UserRole {
 model User {
   id            Int     @id @default(autoincrement())
   fullName      String  
-  personalEmail String  @unique
-  platformEmail  String  @unique
+  email         String  @unique
   password      String
 
   role          UserRole @default(Learner)
   createdAt     DateTime @default(now())
+
+  isVerified    Boolean  @default(false) //everyone starts as unverifed
+  otpCode       String?  // The 6-digit code
+  otpExpiry     DateTime? // when the code expires
 
 }

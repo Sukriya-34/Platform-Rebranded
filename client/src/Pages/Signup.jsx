@@ -1,54 +1,86 @@
-import React, { useState } from "react";
-//vite handles import automatically. make sure you named your image 'auth-illustration.png'
+import { useState } from "react";
 import illustration from "../assets/auth-illustration.png";
 import { registerUser } from "../api/auth";
+import { useLocation, Navigate, useNavigate } from "react-router-dom";
 
 const Signup = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  if (!location.state || !location.state.role) {
+    console.warn("No role selected! Redirecting back...");
+    return <Navigate to="/role-selection" replace />;
+  }
+
+  const userRole = location.state.role;
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [loading, setLoading] = useState(false);
-  const[message, setMessage] = useState(null);
-  const[error, setError] = useState(null);
+
+  // FIX: You were missing this line right here!
+  // This tracks which specific field has an error.
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear the specific field's error when they start typing again to fix it
+    if (fieldErrors[e.target.name]) {
+      setFieldErrors({ ...fieldErrors, [e.target.name]: null });
+    }
   };
 
-  //fetch function that sends data to your express bakecnd
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    setMessage(null);
-    console.log("Sending to backend:", formData);
-  
+    // Clear out any old errors before we check again
+    setFieldErrors({});
 
-  try {
-    const data = await registerUser(formData); 
-    setMessage(`Success! Your new email is: ${data.assignedEmail}`);
-    setFormData({ fullName: "", email: "", password: "" });
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+    // 🛑 1. Check Password Length/Rules
+    if (formData.password.length < 8) {
+      setFieldErrors({
+        password: "Password must be at least 8 characters long.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    // 🛑 2. Check if Passwords Match
+    if (formData.password !== formData.confirmPassword) {
+      setFieldErrors({ confirmPassword: "Passwords do not match." });
+      setLoading(false);
+      return;
+    }
+
+    const { confirmPassword, ...dataToSend } = formData;
+
+    const completeUserData = {
+      ...dataToSend,
+      role: userRole,
+    };
+
+    try {
+      await registerUser(completeUserData);
+      navigate("/verify-otp", { state: { email: formData.email } });
+    } catch (err) {
+      // If the backend sends an error (like "Email already in use"), put it in the general box
+      setFieldErrors({ general: err.message });
+      setLoading(false);
+    }
+  };
 
   return (
-    // MAIN WRAPPER: Takes up full screen height (h-screen) and width (w-full).
-    // Uses Poppins as default font, Ink Black as default text color.
     <div className="flex h-screen w-full overflow-hidden font-poppins text-ink-black bg-porcelain">
-      {/* LEFT SIDE: THE ILLUSTRATION (Desktop Only)*/}
-
+      {/* LEFT SIDE: ILLUSTRATION */}
       <div className="relative hidden lg:flex w-1/2 h-full bg-soft-periwinkle justify-center items-center">
-        {/* We removed the old containment classes. The image now fills the column. */}
         <img
           src={illustration}
           alt="Auth Illustration"
@@ -56,28 +88,28 @@ const Signup = () => {
         />
       </div>
 
-      {/* RIGHT SIDE: THE SIGNUP FORM*/}
+      {/* RIGHT SIDE: SIGNUP FORM */}
       <div className="w-full lg:w-1/2 h-full flex justify-center items-center px-8 sm:px-16 bg-porcelain overflow-y-auto">
-        {/* Maximum width of the form arecdto keep it contained (max-w-md = 400px) */}
         <div className="w-full max-w-md py-8">
-          {" "}
-          {/* Form Header */}
           <div className="text-center mb-10">
-            {/* The title (already Playfair) */}
             <h1 className="font-playfair text-4xl font-bold mb-3 text-ink-black">
               Create your account
             </h1>
-
-            {/* NEW FONT FIX: Description text updated to Playfair */}
             <p className="font-playfair text-sm text-gray-600 leading-relaxed">
               Begin your journey in Platform. Takes less than a minute.
             </p>
           </div>
-          {/* The Actual Form */}
+
+          {/* General Error Box (e.g., Email already taken) */}
+          {fieldErrors.general && (
+            <div className="mb-6 p-3 bg-red-100 border border-red-200 text-red-700 text-sm rounded-md text-center">
+              {fieldErrors.general}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* FULL NAME FIELD */}
+            {/* FULL NAME */}
             <div className="flex flex-col">
-              {/* NEW FONT FIX: Label updated to Playfair */}
               <label className="font-playfair text-sm font-medium mb-1.5">
                 Full name<span className="text-red-500">*</span>
               </label>
@@ -86,15 +118,13 @@ const Signup = () => {
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleChange}
-                // The border is your warm-taupe, and it glows periwinkle when clicked!
                 className="h-12 border border-warm-taupe rounded-md px-4 outline-none focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle transition-all bg-porcelain"
                 required
               />
             </div>
 
-            {/* EMAIL FIELD */}
+            {/* EMAIL */}
             <div className="flex flex-col">
-              {/* NEW FONT FIX: Label updated to Playfair */}
               <label className="font-playfair text-sm font-medium mb-1.5">
                 Email address<span className="text-red-500">*</span>
               </label>
@@ -109,24 +139,63 @@ const Signup = () => {
               />
             </div>
 
-            {/* PASSWORD FIELD */}
+            {/* PASSWORD */}
             <div className="flex flex-col">
-              {/* NEW FONT FIX: Label updated to Playfair */}
-              <label className="font-playfair text-sm font-medium mb-1.5">
-                Password<span className="text-red-500">*</span>
-              </label>
+              <div className="flex justify-between items-baseline mb-1.5">
+                <label className="font-playfair text-sm font-medium">
+                  Password<span className="text-red-500">*</span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mb-2">
+                Password must be at least 8 characters and should have a mixture
+                of letters and other characters.
+              </p>
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 autoComplete="new-password"
-                className="h-12 border border-warm-taupe rounded-md px-4 outline-none focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle transition-all bg-porcelain"
+                className={`h-12 border rounded-md px-4 outline-none transition-all bg-porcelain ${
+                  fieldErrors.password
+                    ? "border-red-500 focus:ring-1 focus:ring-red-500"
+                    : "border-warm-taupe focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle"
+                }`}
                 required
               />
+              {fieldErrors.password && (
+                <span className="text-red-500 text-xs mt-1">
+                  {fieldErrors.password}
+                </span>
+              )}
             </div>
 
-            {/* TERMS & CONDITIONS CHECKBOX */}
+            {/* CONFIRM PASSWORD */}
+            <div className="flex flex-col">
+              <label className="font-playfair text-sm font-medium mb-1.5">
+                Confirm Password<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                autoComplete="new-password"
+                className={`h-12 border rounded-md px-4 outline-none transition-all bg-porcelain ${
+                  fieldErrors.confirmPassword
+                    ? "border-red-500 focus:ring-1 focus:ring-red-500"
+                    : "border-warm-taupe focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle"
+                }`}
+                required
+              />
+              {fieldErrors.confirmPassword && (
+                <span className="text-red-500 text-xs mt-1">
+                  {fieldErrors.confirmPassword}
+                </span>
+              )}
+            </div>
+
+            {/* TERMS & CONDITIONS */}
             <div className="flex items-start mt-2 mb-6">
               <input
                 type="checkbox"
@@ -151,6 +220,7 @@ const Signup = () => {
               </p>
             </div>
 
+            {/* SUBMIT BUTTON */}
             {/* CREATE ACCOUNT BUTTON */}
             <button
               type="submit"
@@ -159,20 +229,18 @@ const Signup = () => {
               Create account
             </button>
           </form>
-          {/* SOCIAL LOGIN & FOOTER*/}
-          {/* The "OR" divider line */}
+
+          {/* SOCIAL LOGIN */}
           <div className="flex items-center my-8">
             <div className="grow border-t border-warm-taupe"></div>
             <span className="mx-4 text-gray-400 text-sm">or</span>
             <div className="grow border-t border-warm-taupe"></div>
           </div>
-          {/* GOOGLE SIGN IN BUTTON */}
+
           <button
             type="button"
-            // Notice the 'shadow-sm' class here to give it that slight lift!
             className="w-full h-12 flex items-center justify-center bg-white border border-warm-taupe shadow-sm rounded-md hover:bg-soft-linen transition-colors duration-200 mb-8"
           >
-            {/* Standard Google "G" SVG Icon */}
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -195,7 +263,7 @@ const Signup = () => {
               Continue with Google
             </span>
           </button>
-          {/* LINK TO LOGIN PAGE */}
+
           <p className="text-center text-sm text-gray-600">
             Already have an account?{" "}
             <a

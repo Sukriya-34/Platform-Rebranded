@@ -3,7 +3,7 @@ import Login from "./Pages/Login";
 import ForgotPassword from "./Pages/ForgotPassword";
 import RoleSelection from "./Pages/RoleSelection";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
+import VerifyOTP from "./Pages/VerifyOTP";
 
 function App() {
   // 1. We look at the web browser's search bar to see what the path is
@@ -31,6 +31,7 @@ function App() {
           <Route path="/role-selection" element={<RoleSelection />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-otp" element={<VerifyOTP />} />
         </Routes>
       </div>
     </BrowserRouter>
