@@ -1,21 +1,22 @@
 import bcrypt from "bcrypt";
-import pg from "pg";
+// import pg from "pg";
 import express from "express";
 import dotenv from "dotenv";
+import prisma from "../db.js";
 
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+// import { PrismaClient } from "@prisma/client";
+// import { PrismaPg } from "@prisma/adapter-pg";
 
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 
 dotenv.config();
 
-const { Pool } = pg;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// const { Pool } = pg;
+// const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter }); //start the prisma engine
+// const adapter = new PrismaPg(pool);
+// const prisma = new PrismaClient({ adapter }); //start the prisma engine
 
 const router = express.Router();
 
@@ -59,9 +60,21 @@ router.post("/register", async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({
-        message: "An account with this personal email already exists!",
-      });
+      // 1. If they exist AND they are verified, we block them.
+      // (Note: Make sure 'isVerified' matches whatever you named this column in your database!)
+      if (existingUser.isVerified) {
+        return res.status(400).json({
+          message: "An account with this personal email already exists!",
+        });
+      }
+
+      // 2. If they exist but NEVER verified their OTP, they are a "ghost".
+      // We delete the ghost account so the code below can create a fresh one!
+      else {
+        await prisma.user.delete({
+          where: { email },
+        });
+      }
     }
 
     //3. Hash the password
@@ -265,6 +278,87 @@ router.post("/resend-otp", async (req, res) => {
   } catch (err) {
     console.error("Resend Error:", err.message);
     res.status(500).json({ message: "Failed to resend code." });
+  }
+});
+
+//google auth route
+router.post("/google", async (req, res) => {
+  console.log("GOOGLE AUTH ATTEMPT:", req.body);
+  const { access_token, role } = req.body;
+
+  if (!access_token) {
+    return res
+      .status(400)
+      .json({ message: "Google access token is required." });
+  }
+
+  try {
+    // Fetch user details from Google using the token
+    const googleResponse = await fetch(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: { Authorization: `Bearer ${access_token}` },
+      },
+    );
+
+    const googleUser = await googleResponse.json();
+
+    if (!googleResponse.ok) {
+      return res.status(401).json({ message: "Invalid Google token." });
+    }
+
+    const { email, name, sub } = googleUser; // 'sub' is Google's unique ID
+
+    // Check if user already exists
+    let user = await prisma.user.findUnique({
+      where: { email: email },
+    });
+
+    // If user doesn't exist, CREATE them
+    if (!user) {
+      const salt = await bcrypt.genSalt(10);
+      const randomPassword = await bcrypt.hash(
+        sub + process.env.JWT_SECRET,
+        salt,
+      );
+      const prismaRole = role ? role.replace(/\s+/g, "") : "Learner";
+
+      user = await prisma.user.create({
+        data: {
+          fullName: name,
+          email: email,
+          password: randomPassword,
+          role: prismaRole,
+          isVerified: true, // Auto-verify them!
+        },
+      });
+      console.log(`SUCCESS: Registered new Google user - ${email}`);
+    } else {
+      console.log(`SUCCESS: Existing Google user logged in - ${email}`);
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" },
+    );
+
+    res.status(200).json({
+      message: "Google authentication successful!",
+      token: token,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Google Auth Error: ", err.message);
+    res
+      .status(500)
+      .json({ error: "Server error during Google authentication." });
   }
 });
 

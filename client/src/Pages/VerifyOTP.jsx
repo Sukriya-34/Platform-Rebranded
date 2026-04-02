@@ -11,24 +11,20 @@ const VerifyOTP = () => {
   }
   const userEmail = location.state.email;
 
-  // State to track the user's input, the loading button, and any backend errors.
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  //states for the reset link
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState(null);
 
   const handleSubmit = async (e) => {
-    // Prevent the browser from refreshing the page when they click submit
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setResendMessage(null); //clear any old resend messages
+    setResendMessage(null);
 
     try {
-      // Send the email and the code they typed to our Express server
       const response = await fetch("http://localhost:5000/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -37,12 +33,10 @@ const VerifyOTP = () => {
 
       const data = await response.json();
 
-      // If the backend sends an error (like a 400 status), throw it so our catch block grabs it
       if (!response.ok) {
-        throw new Error(data.message || "Invalid OTP");
+        throw new Error(data.message || "Invalid verification code.");
       }
 
-      // If it passes, send them to the login page and pass a success message in the backpack!
       navigate("/login", {
         state: { message: "Account verified! Please log in." },
       });
@@ -52,25 +46,24 @@ const VerifyOTP = () => {
       setLoading(false);
     }
   };
+
   const handleResend = async () => {
     setResendLoading(true);
     setError(null);
     setResendMessage(null);
+    setOtp(""); // Clear the input field for them
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/resend-otp",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: userEmail }),
-        },
-      );
+      const response = await fetch("http://localhost:5000/api/resend-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to resend code");
+        throw new Error(data.message || "Failed to resend code.");
       }
 
       setResendMessage("A new code has been sent!");
@@ -82,9 +75,8 @@ const VerifyOTP = () => {
   };
 
   return (
-    // Main full-screen container matching the signup/login split layout
     <div className="flex h-screen w-full overflow-hidden font-poppins text-ink-black bg-porcelain">
-      {/* Left side: The illustration panel. Hidden on mobile, visible on desktop (lg). */}
+      {/* LEFT SIDE: ILLUSTRATION */}
       <div className="relative hidden lg:flex w-1/2 h-full bg-soft-periwinkle justify-center items-center">
         <img
           src={otpIllustration}
@@ -93,25 +85,29 @@ const VerifyOTP = () => {
         />
       </div>
 
-      {/* Right side: The verification form panel */}
+      {/* RIGHT SIDE: VERIFICATION FORM */}
       <div className="w-full lg:w-1/2 h-full flex justify-center items-center px-8 sm:px-16 bg-porcelain overflow-y-auto">
         <div className="w-full max-w-md py-8">
+          {/* HEADER SECTION */}
           <div className="text-center mb-10">
             <h1 className="font-playfair text-4xl font-bold mb-3 text-ink-black">
               Verify Your Identity
             </h1>
-            <p className="font-playfair text-sm text-gray-600 leading-relaxed">
-              We've securely sent a 6-digit code to <br />
-              <span className="font-semibold text-ink-black">{userEmail}</span>
-            </p>
-          </div>
 
-          {/* If the backend throws an error (e.g., wrong code), display this box */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm border border-red-200 text-center">
-              {error}
-            </div>
-          )}
+            {/* Elegant toggle for the Resend Success message! */}
+            {resendMessage ? (
+              <p className="font-playfair text-sm text-green-600 font-medium leading-relaxed">
+                 {resendMessage}
+              </p>
+            ) : (
+              <p className="font-playfair text-sm text-gray-600 leading-relaxed">
+                We've securely sent a 6-digit code to <br />
+                <span className="font-semibold text-ink-black">
+                  {userEmail}
+                </span>
+              </p>
+            )}
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-col">
@@ -121,12 +117,25 @@ const VerifyOTP = () => {
               <input
                 type="text"
                 maxLength="6"
-                // using regex to strip out any letters, forcing numbers only
-                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                onChange={(e) => {
+                  setOtp(e.target.value.replace(/[^0-9]/g, ""));
+                  setError(null); // Instantly clears the red error state when they start typing
+                }}
                 value={otp}
-                className="h-12 border border-warm-taupe rounded-md px-4 outline-none focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle transition-all bg-white text-center tracking-[0.5em] text-lg font-medium"
+                // 👇 Advanced field-level validation styling!
+                className={`h-12 border rounded-md px-4 outline-none transition-all bg-white text-center tracking-[0.5em] text-lg font-medium ${
+                  error
+                    ? "border-red-500 focus:ring-1 focus:ring-red-500"
+                    : "border-warm-taupe focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle"
+                }`}
                 required
               />
+              {/* 👇 The subtle red text underneath the input */}
+              {error && (
+                <span className="text-red-500 text-xs mt-2 text-center block">
+                  {error}
+                </span>
+              )}
             </div>
 
             <button
@@ -140,7 +149,7 @@ const VerifyOTP = () => {
             </button>
           </form>
 
-          {/* Optional resend link  */}
+          {/* RESEND LINK */}
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
               <span className="mr-2">←</span>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import illustration from "../assets/auth-illustration.png";
 import { registerUser } from "../api/auth";
 import { useLocation, Navigate, useNavigate } from "react-router-dom";
+import { useGoogleLogin } from "@react-oauth/google"; // Using the hook instead!
 
 const Signup = () => {
   const location = useLocation();
@@ -22,29 +23,21 @@ const Signup = () => {
   });
 
   const [loading, setLoading] = useState(false);
-
-  // FIX: You were missing this line right here!
-  // This tracks which specific field has an error.
   const [fieldErrors, setFieldErrors] = useState({});
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-    // Clear the specific field's error when they start typing again to fix it
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     if (fieldErrors[e.target.name]) {
       setFieldErrors({ ...fieldErrors, [e.target.name]: null });
     }
   };
 
+  // --- STANDARD SIGNUP ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Clear out any old errors before we check again
     setFieldErrors({});
 
-    // 🛑 1. Check Password Length/Rules
     if (formData.password.length < 8) {
       setFieldErrors({
         password: "Password must be at least 8 characters long.",
@@ -52,8 +45,6 @@ const Signup = () => {
       setLoading(false);
       return;
     }
-
-    // 🛑 2. Check if Passwords Match
     if (formData.password !== formData.confirmPassword) {
       setFieldErrors({ confirmPassword: "Passwords do not match." });
       setLoading(false);
@@ -61,25 +52,63 @@ const Signup = () => {
     }
 
     const { confirmPassword, ...dataToSend } = formData;
-
-    const completeUserData = {
-      ...dataToSend,
-      role: userRole,
-    };
+    const completeUserData = { ...dataToSend, role: userRole };
 
     try {
       await registerUser(completeUserData);
       navigate("/verify-otp", { state: { email: formData.email } });
     } catch (err) {
-      // If the backend sends an error (like "Email already in use"), put it in the general box
       setFieldErrors({ general: err.message });
+    } finally {
       setLoading(false);
     }
   };
 
+  // --- GOOGLE SIGNUP/LOGIN ---
+  const googleSignup = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        const response = await fetch("http://localhost:5000/api/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // We pass the role here so the backend knows what to create them as!
+          body: JSON.stringify({
+            access_token: tokenResponse.access_token,
+            role: userRole,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok)
+          throw new Error(data.message || "Google signup failed.");
+
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        const fetchedRole = data.user.role;
+        if (fetchedRole === "admin" || fetchedRole === "Admin")
+          navigate("/admin-dashboard");
+        else if (
+          fetchedRole === "creator" ||
+          fetchedRole === "ContentCreator" ||
+          fetchedRole === "Content Creator"
+        )
+          navigate("/creator-dashboard");
+        else navigate("/learner-dashboard");
+      } catch (err) {
+        setFieldErrors({ general: err.message });
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () =>
+      setFieldErrors({ general: "Google Auth failed or was cancelled." }),
+  });
+
   return (
     <div className="flex h-screen w-full overflow-hidden font-poppins text-ink-black bg-porcelain">
-      {/* LEFT SIDE: ILLUSTRATION */}
       <div className="relative hidden lg:flex w-1/2 h-full bg-soft-periwinkle justify-center items-center">
         <img
           src={illustration}
@@ -88,7 +117,6 @@ const Signup = () => {
         />
       </div>
 
-      {/* RIGHT SIDE: SIGNUP FORM */}
       <div className="w-full lg:w-1/2 h-full flex justify-center items-center px-8 sm:px-16 bg-porcelain overflow-y-auto">
         <div className="w-full max-w-md py-8">
           <div className="text-center mb-10">
@@ -100,7 +128,6 @@ const Signup = () => {
             </p>
           </div>
 
-          {/* General Error Box (e.g., Email already taken) */}
           {fieldErrors.general && (
             <div className="mb-6 p-3 bg-red-100 border border-red-200 text-red-700 text-sm rounded-md text-center">
               {fieldErrors.general}
@@ -108,7 +135,6 @@ const Signup = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* FULL NAME */}
             <div className="flex flex-col">
               <label className="font-playfair text-sm font-medium mb-1.5">
                 Full name<span className="text-red-500">*</span>
@@ -123,7 +149,6 @@ const Signup = () => {
               />
             </div>
 
-            {/* EMAIL */}
             <div className="flex flex-col">
               <label className="font-playfair text-sm font-medium mb-1.5">
                 Email address<span className="text-red-500">*</span>
@@ -139,16 +164,12 @@ const Signup = () => {
               />
             </div>
 
-            {/* PASSWORD */}
             <div className="flex flex-col">
-              <div className="flex justify-between items-baseline mb-1.5">
-                <label className="font-playfair text-sm font-medium">
-                  Password<span className="text-red-500">*</span>
-                </label>
-              </div>
+              <label className="font-playfair text-sm font-medium mb-1.5">
+                Password<span className="text-red-500">*</span>
+              </label>
               <p className="text-xs text-gray-500 mb-2">
-                Password must be at least 8 characters and should have a mixture
-                of letters and other characters.
+                Password must be at least 8 characters.
               </p>
               <input
                 type="password"
@@ -156,11 +177,7 @@ const Signup = () => {
                 value={formData.password}
                 onChange={handleChange}
                 autoComplete="new-password"
-                className={`h-12 border rounded-md px-4 outline-none transition-all bg-porcelain ${
-                  fieldErrors.password
-                    ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                    : "border-warm-taupe focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle"
-                }`}
+                className={`h-12 border rounded-md px-4 outline-none transition-all bg-porcelain ${fieldErrors.password ? "border-red-500 focus:ring-1 focus:ring-red-500" : "border-warm-taupe focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle"}`}
                 required
               />
               {fieldErrors.password && (
@@ -170,7 +187,6 @@ const Signup = () => {
               )}
             </div>
 
-            {/* CONFIRM PASSWORD */}
             <div className="flex flex-col">
               <label className="font-playfair text-sm font-medium mb-1.5">
                 Confirm Password<span className="text-red-500">*</span>
@@ -181,11 +197,7 @@ const Signup = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 autoComplete="new-password"
-                className={`h-12 border rounded-md px-4 outline-none transition-all bg-porcelain ${
-                  fieldErrors.confirmPassword
-                    ? "border-red-500 focus:ring-1 focus:ring-red-500"
-                    : "border-warm-taupe focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle"
-                }`}
+                className={`h-12 border rounded-md px-4 outline-none transition-all bg-porcelain ${fieldErrors.confirmPassword ? "border-red-500 focus:ring-1 focus:ring-red-500" : "border-warm-taupe focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle"}`}
                 required
               />
               {fieldErrors.confirmPassword && (
@@ -195,51 +207,27 @@ const Signup = () => {
               )}
             </div>
 
-            {/* TERMS & CONDITIONS */}
-            <div className="flex items-start mt-2 mb-6">
-              <input
-                type="checkbox"
-                className="mt-1 mr-3 w-4 h-4 cursor-pointer accent-ink-black"
-                required
-              />
-              <p className="text-xs text-gray-600 leading-relaxed">
-                By creating an account, I agree to our{" "}
-                <a
-                  href="#"
-                  className="underline font-medium hover:text-ink-black"
-                >
-                  Terms of use
-                </a>{" "}
-                and{" "}
-                <a
-                  href="#"
-                  className="underline font-medium hover:text-ink-black"
-                >
-                  Privacy Policy
-                </a>
-              </p>
-            </div>
-
-            {/* SUBMIT BUTTON */}
-            {/* CREATE ACCOUNT BUTTON */}
             <button
               type="submit"
-              className="w-full h-12 bg-soft-periwinkle hover:bg-lavender-grey text-ink-black font-semibold rounded-md transition-colors duration-200"
+              disabled={loading}
+              className="w-full h-12 bg-soft-periwinkle hover:bg-lavender-grey text-ink-black font-semibold rounded-md transition-colors duration-200 mt-4"
             >
-              Create account
+              {loading ? "Creating account..." : "Create account"}
             </button>
           </form>
 
-          {/* SOCIAL LOGIN */}
           <div className="flex items-center my-8">
             <div className="grow border-t border-warm-taupe"></div>
             <span className="mx-4 text-gray-400 text-sm">or</span>
             <div className="grow border-t border-warm-taupe"></div>
           </div>
 
+          {/* ACTIVE GOOGLE BUTTON */}
           <button
             type="button"
-            className="w-full h-12 flex items-center justify-center bg-white border border-warm-taupe shadow-sm rounded-md hover:bg-soft-linen transition-colors duration-200 mb-8"
+            onClick={() => googleSignup()}
+            disabled={loading}
+            className={`w-full h-12 flex items-center justify-center bg-white border border-warm-taupe shadow-sm rounded-md hover:bg-soft-linen transition-colors duration-200 mb-8 ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
           >
             <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
               <path
@@ -260,7 +248,7 @@ const Signup = () => {
               />
             </svg>
             <span className="font-medium text-ink-black">
-              Continue with Google
+              {loading ? "Authenticating..." : "Sign up with Google"}
             </span>
           </button>
 
