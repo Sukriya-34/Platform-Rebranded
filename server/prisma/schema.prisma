@@ -37,6 +37,8 @@ model Course {
   id           String     @id @default(uuid())
   title        String        
   description  String
+  category     String
+  thumbnailUrl String?
   creatorId    Int
   creator      User       @relation(fields: [creatorId], references: [id])
   videos      Video[]

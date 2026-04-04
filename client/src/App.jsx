@@ -10,6 +10,7 @@ import Login from "./Pages/Auth/Login";
 import ForgotPassword from "./Pages/Auth/ForgotPassword";
 import RoleSelection from "./Pages/Auth/RoleSelection";
 import VerifyOTP from "./Pages/Auth/VerifyOTP";
+import ResetPassword from "./Pages/Auth/ResetPassword";
 
 // Creator Pages
 import Dashboard from "./Pages/Creator/Dashboard";
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Creator Routes Wrapped in the Layout */}
           <Route path="/creator" element={<CreatorLayout />}>

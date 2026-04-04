@@ -362,4 +362,67 @@ router.post("/google", async (req, res) => {
   }
 });
 
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    // Security Best Practice: Don't reveal if the email exists.
+    // Just send a 200 status either way.
+    if (!user) {
+      return res.status(200).json({
+        message:
+          "If an account exists, a reset link has been sent to your email.",
+      });
+    }
+
+    // This link points to your frontend Reset Password page
+    const resetLink = `http://localhost:5173/reset-password?email=${email}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Reset your Platform Password",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #F4EFE6;">
+          <h2 style="color: #9893DA;">Password Reset Request</h2>
+          <p>We received a request to reset your password for your <strong>Platform</strong> account.</p>
+          <p>Click the button below to choose a new password:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetLink}" style="background-color: #9893DA; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset My Password</a>
+          </div>
+          <p style="font-size: 12px; color: #797A9E;">If you did not request this, please ignore this email. Your password will remain unchanged.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Password reset link sent to: ${email}`);
+
+    res.status(200).json({ message: "Reset link sent successfully!" });
+  } catch (error) {
+    console.error("Forgot Password Error:", error.message);
+    res.status(500).json({ message: "Error sending reset email." });
+  }
+});
+
+//  Reset Password Update
+router.post("/reset-password", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+
+    res.status(200).json({ message: "Password updated successfully!" });
+  } catch (error) {
+    res.status(500).json({ message: "Error resetting password." });
+  }
+});
 export default router;

@@ -18,7 +18,7 @@ export default function CreatorLayout() {
             <img
               src="/pathway.svg"
               alt="The Platfrm.X Logo"
-              className="w-full max-w-[180px] h-auto object-contain mb-3"
+              className="w-full max-w-45 h-auto object-contain mb-3"
             />
             <span className="text-xs text-warm-taupe uppercase tracking-[0.3em] font-bold block">
               Creator Studio

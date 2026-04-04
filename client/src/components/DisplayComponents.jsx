@@ -73,7 +73,7 @@ export function Toast({ message, type = "success", onClose, duration = 3000 }) {
   };
 
   return (
-    <div className="fixed top-6 right-6 z-[100] flex items-center gap-4 px-6 py-4 rounded-2xl bg-ink-black text-white shadow-2xl animate-fadeIn border border-gray-700 max-w-sm">
+    <div className="fixed top-6 right-6 z-100 flex items-center gap-4 px-6 py-4 rounded-2xl bg-ink-black text-white shadow-2xl animate-fadeIn border border-gray-700 max-w-sm">
       {icons[type]}
       <p className="text-sm font-medium pr-4">{message}</p>
       <button
@@ -106,7 +106,7 @@ export function Modal({
   const sizes = { small: "max-w-md", medium: "max-w-2xl", large: "max-w-4xl" };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       {/* Dynamic Glass Blur Overlay */}
       <div
         className="absolute inset-0 bg-ink-black/40 backdrop-blur-md animate-fadeIn"
@@ -115,7 +115,7 @@ export function Modal({
 
       {/* Modal Container */}
       <div
-        className={`relative bg-white rounded-[32px] shadow-2xl w-full ${sizes[size]} max-h-[90vh] flex flex-col animate-modalPop overflow-hidden`}
+        className={`relative bg-white rounded-4xl shadow-2xl w-full ${sizes[size]} max-h-[90vh] flex flex-col animate-modalPop overflow-hidden`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-8 border-b border-soft-linen bg-white">

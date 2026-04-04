@@ -9,30 +9,83 @@ export default function Courses() {
   const [courses, setCourses] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [editingId, setEditingId] = useState(null); // Track if we are editing
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
+    thumbnail: null,
   });
 
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/courses");
+      const data = await response.json();
+      setCourses(data);
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+    }
+  };
+
   useEffect(() => {
-    setCourses([
-      {
-        id: 1,
-        title: "Introduction to Web Development",
-        description:
-          "Master the fundamentals of the modern web: HTML5, CSS3, and JS.",
-        category: "Web",
-      },
-      {
-        id: 2,
-        title: "Advanced React Patterns",
-        description:
-          "Deep dive into HOCs, Render Props, and Compound Components.",
-        category: "Programming",
-      },
-    ]);
+    fetchCourses();
   }, []);
+
+  // Open modal in Edit Mode
+  const handleEditClick = (course, e) => {
+    e.stopPropagation();
+    setEditingId(course.id);
+    setFormData({
+      title: course.title,
+      description: course.description,
+      category: course.category,
+      thumbnail: null, // Only update if they pick a new file
+    });
+    setShowCreate(true);
+  };
+
+  // Reset form and close modal
+  const handleCloseModal = () => {
+    setShowCreate(false);
+    setEditingId(null);
+    setFormData({ title: "", description: "", category: "", thumbnail: null });
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+
+    const dataToSend = new FormData();
+    dataToSend.append("title", formData.title);
+    dataToSend.append("description", formData.description);
+    dataToSend.append("category", formData.category);
+    dataToSend.append("creatorId", "1"); 
+    if (formData.thumbnail) {
+      dataToSend.append("thumbnail", formData.thumbnail);
+    }
+
+    // Switch between CREATE and UPDATE based on editingId
+    const url = editingId 
+      ? `http://localhost:5000/api/courses/${editingId}` 
+      : "http://localhost:5000/api/courses/create";
+    
+    const method = editingId ? "PUT" : "POST";
+
+    try {
+      const response = await fetch(url, {
+        method: method,
+        body: dataToSend,
+      });
+
+      if (response.ok) {
+        handleCloseModal();
+        setToastMessage(editingId ? "Course updated!" : "Course created successfully!");
+        fetchCourses(); 
+      }
+    } catch (error) {
+      setToastMessage("An error occurred.");
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -66,9 +119,18 @@ export default function Courses() {
               onClick={() => navigate(`/creator/courses/${course.id}`)}
               className="flex-1"
             >
-              <div className="w-full h-40 bg-porcelain rounded-2xl mb-6 flex items-center justify-center">
-                <BookOpen size={44} className="text-soft-periwinkle/60" />
+              <div className="w-full h-44 bg-porcelain rounded-2xl mb-6 overflow-hidden flex items-center justify-center">
+                {course.thumbnailUrl ? (
+                  <img
+                    src={course.thumbnailUrl}
+                    alt={course.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <BookOpen size={44} className="text-soft-periwinkle/60" />
+                )}
               </div>
+
               <h3 className="text-xl font-bold mb-2 leading-tight">
                 {course.title}
               </h3>
@@ -83,19 +145,20 @@ export default function Courses() {
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setToastMessage("Edit coming soon!");
-                  }}
+                  onClick={(e) => handleEditClick(course, e)}
                   className="p-2 text-lavender-grey hover:text-soft-periwinkle hover:bg-porcelain rounded-xl transition-all"
                 >
                   <Edit2 size={18} />
                 </button>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    setCourses(courses.filter((c) => c.id !== course.id));
+                    await fetch(
+                      `http://localhost:5000/api/courses/${course.id}`,
+                      { method: "DELETE" },
+                    );
                     setToastMessage("Deleted.");
+                    fetchCourses();
                   }}
                   className="p-2 text-lavender-grey hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                 >
@@ -109,18 +172,10 @@ export default function Courses() {
 
       <Modal
         isOpen={showCreate}
-        onClose={() => setShowCreate(false)}
-        title="New Course Draft"
+        onClose={handleCloseModal}
+        title={editingId ? "Edit Course Draft" : "New Course Draft"}
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setCourses([...courses, { id: Date.now(), ...formData }]);
-            setShowCreate(false);
-            setToastMessage("Course created!");
-          }}
-          className="space-y-6"
-        >
+        <form onSubmit={handleFormSubmit} className="space-y-6">
           <Input
             label="Title"
             value={formData.title}
@@ -149,14 +204,32 @@ export default function Courses() {
             }
             required
           />
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-ink-black">
+              {editingId ? "Update Thumbnail (Optional)" : "Course Thumbnail"}
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                setFormData({ ...formData, thumbnail: e.target.files[0] })
+              }
+              className="w-full p-3 border border-soft-linen rounded-2xl text-sm"
+            />
+          </div>
+
           <div className="flex justify-end gap-3 pt-6">
-            <Button variant="secondary" onClick={() => setShowCreate(false)}>
+            <Button variant="secondary" onClick={handleCloseModal}>
               Cancel
             </Button>
-            <Button type="submit">Publish Draft</Button>
+            <Button type="submit">
+              {editingId ? "Update Course" : "Publish Draft"}
+            </Button>
           </div>
         </form>
       </Modal>
+
       {toastMessage && (
         <Toast message={toastMessage} onClose={() => setToastMessage("")} />
       )}
