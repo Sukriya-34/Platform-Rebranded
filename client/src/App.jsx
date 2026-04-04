@@ -1,21 +1,27 @@
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+// Layouts
+import CreatorLayout from "./layouts/CreatorLayout";
+
+// Auth Pages
 import Signup from "./Pages/Auth/Signup";
 import Login from "./Pages/Auth/Login";
 import ForgotPassword from "./Pages/Auth/ForgotPassword";
 import RoleSelection from "./Pages/Auth/RoleSelection";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import VerifyOTP from "./Pages/Auth/VerifyOTP";
 
-import MyCourses from './Pages/Creator/MyCourse';
-import CreateCourse from './Pages/Creator/CreateCourse';
-import CourseDetail from './Pages/Creator/CourseDetail';
+// Creator Pages
+import Dashboard from "./Pages/Creator/Dashboard";
+import Courses from "./Pages/Creator/Courses";
+import UploadContent from "./Pages/Creator/UploadContent";
+import ManageContent from "./Pages/Creator/ManageContent";
 
-function App() {
-  // 1. We look at the web browser's search bar to see what the path is
+export default function App() {
+  // 1. Preserve your original auth checks
   const currentPath = window.location.pathname;
-  //set up a variable to hold the page we want to show
   let CurrentPage;
 
-  // We check the URL and assign the correct page component
   if (currentPath === "/login") {
     CurrentPage = Login;
   } else if (currentPath === "/forgot-password") {
@@ -23,25 +29,31 @@ function App() {
   } else {
     CurrentPage = Signup;
   }
+
   return (
     <BrowserRouter>
       <div className="w-full h-full">
         <Routes>
-          {/* Default route redirects to login */}
+          {/* Default Route */}
           <Route path="/" element={<Navigate to="/login" replace />} />
 
-          {/* Your actual routes */}
+          {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/role-selection" element={<RoleSelection />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
 
-          {/* Creator Routes */}
-          <Route path="/creator/courses" element={<MyCourses />} />
-          <Route path="/creator/courses/new" element={<CreateCourse />} />
-          <Route path="/creator/courses/:id" element={<CourseDetail />} />
+          {/* Creator Routes Wrapped in the Layout */}
+          <Route path="/creator" element={<CreatorLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="courses" element={<Courses />} />
+            <Route path="upload" element={<UploadContent />} />
+            <Route path="manage" element={<ManageContent />} />
+          </Route>
 
+          {/* 404 Route */}
           <Route
             path="*"
             element={<div className="p-8 font-poppins">Page not found</div>}
@@ -51,5 +63,3 @@ function App() {
     </BrowserRouter>
   );
 }
-
-export default App;
