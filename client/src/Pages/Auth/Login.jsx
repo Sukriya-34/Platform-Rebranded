@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
-import illustration from "../assets/auth-illustration.png";
+import illustration from "../../assets/auth-illustration.png";
 
 const Login = () => {
   const navigate = useNavigate();

@@ -1,11 +1,13 @@
-import Signup from "./Pages/Signup";
-import Login from "./Pages/Login";
-import ForgotPassword from "./Pages/ForgotPassword";
-import RoleSelection from "./Pages/RoleSelection";
+import Signup from "./Pages/Auth/Signup";
+import Login from "./Pages/Auth/Login";
+import ForgotPassword from "./Pages/Auth/ForgotPassword";
+import RoleSelection from "./Pages/Auth/RoleSelection";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import VerifyOTP from "./Pages/VerifyOTP";
-import CreatorDashboard from "./Pages/CreatorDashboard";
-import LearnerDashboard from "./Pages/LearnerDashboard";
+import VerifyOTP from "./Pages/Auth/VerifyOTP";
+
+import MyCourses from './Pages/Creator/MyCourse';
+import CreateCourse from './Pages/Creator/CreateCourse';
+import CourseDetail from './Pages/Creator/CourseDetail';
 
 function App() {
   // 1. We look at the web browser's search bar to see what the path is
@@ -34,8 +36,16 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
-          <Route path="/creator-dashboard" element={<CreatorDashboard />} />
-          <Route path="/learner-dashboard" element={<LearnerDashboard />} />
+
+          {/* Creator Routes */}
+          <Route path="/creator/courses" element={<MyCourses />} />
+          <Route path="/creator/courses/new" element={<CreateCourse />} />
+          <Route path="/creator/courses/:id" element={<CourseDetail />} />
+
+          <Route
+            path="*"
+            element={<div className="p-8 font-poppins">Page not found</div>}
+          />
         </Routes>
       </div>
     </BrowserRouter>

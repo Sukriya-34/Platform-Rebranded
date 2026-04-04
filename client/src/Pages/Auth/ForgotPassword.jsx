@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 // We can just reuse your existing auth illustration here to keep it simple!
-import illustration from "../assets/auth-illustration.png";
+import illustration from "../../assets/auth-illustration.png";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");

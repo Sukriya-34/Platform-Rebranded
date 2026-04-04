@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Navigate } from "react-router-dom";
-import otpIllustration from "../assets/auth-illustration.png";
+import otpIllustration from "../../assets/auth-illustration.png";
 
 const VerifyOTP = () => {
   const location = useLocation();

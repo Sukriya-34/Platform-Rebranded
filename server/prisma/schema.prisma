@@ -29,4 +29,33 @@ model User {
   otpCode       String?  // The 6-digit code
   otpExpiry     DateTime? // when the code expires
 
+  courses       Course[]
+
+}
+
+model Course {
+  id           String     @id @default(uuid())
+  title        String        
+  description  String
+  creatorId    Int
+  creator      User       @relation(fields: [creatorId], references: [id])
+  videos      Video[]
+  documents   Document[]
+  createdAt   DateTime   @default(now())
+}
+model Video {
+  id          String   @id @default(uuid())
+  title       String
+  videoUrl    String   // This will store the file path of the uploaded video
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+model Document {
+  id          String   @id @default(uuid())
+  title       String
+  docUrl      String   // This will store the file path of the PDF/Doc
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
 }

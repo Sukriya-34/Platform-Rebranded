@@ -1,6 +1,6 @@
 import { useState } from "react";
-import illustration from "../assets/auth-illustration.png";
-import { registerUser } from "../api/auth";
+import illustration from "../../assets/auth-illustration.png";
+import { registerUser } from "../../api/auth";
 import { useLocation, Navigate, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google"; // Using the hook instead!
 

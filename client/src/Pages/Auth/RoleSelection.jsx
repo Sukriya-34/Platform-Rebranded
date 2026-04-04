@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import illustration from '../assets/auth-illustration.png'; // Reuse your image!
+import illustration from '../../assets/auth-illustration.png'; // Reuse your image!
 
 const RoleSelection = () => {
   const navigate = useNavigate();
