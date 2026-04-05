@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Layouts
 import CreatorLayout from "./layouts/CreatorLayout";
+import LearnerLayout from "./layouts/LearnerLayout";
 
 // Auth Pages
 import Signup from "./Pages/Auth/Signup";
@@ -17,6 +18,12 @@ import Dashboard from "./Pages/Creator/Dashboard";
 import Courses from "./Pages/Creator/Courses";
 import UploadContent from "./Pages/Creator/UploadContent";
 import ManageContent from "./Pages/Creator/ManageContent";
+import CourseView from "./Pages/Creator/CourseView";
+
+// Learner Pages
+import LearnerDashboard from "./Pages/Learner/Dashboard";
+import LearnerCourseView from "./Pages/Learner/CourseView";
+import MyLearning from "./Pages/Learner/MyLearning";
 
 export default function App() {
   // 1. Preserve your original auth checks
@@ -51,8 +58,17 @@ export default function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="courses" element={<Courses />} />
+            <Route path="courses/:id" element={<CourseView />} />
             <Route path="upload" element={<UploadContent />} />
             <Route path="manage" element={<ManageContent />} />
+          </Route>
+
+          {/* Learner Routes Wrapped in the Layout */}
+          <Route path="/learner" element={<LearnerLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<LearnerDashboard />} />
+            <Route path="my-courses" element={<MyLearning />} />
+            <Route path="courses/:id" element={<LearnerCourseView />} />
           </Route>
 
           {/* 404 Route */}

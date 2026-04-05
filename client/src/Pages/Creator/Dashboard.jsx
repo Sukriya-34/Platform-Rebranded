@@ -7,7 +7,7 @@ export default function Dashboard() {
   const [recentContent, setRecentContent] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  /*useEffect(() => {
     // TEMPORARY MOCK DATA: Simulating a backend call
     const loadDashboardData = async () => {
       setLoading(true);
@@ -50,7 +50,40 @@ export default function Dashboard() {
     };
 
     loadDashboardData();
-  }, []);
+  }, []);*/
+
+  useEffect(() => {
+  const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch real data from your backend
+      const response = await fetch("http://localhost:5000/api/courses/all-assets");
+      const assets = await response.json();
+      const safeAssets = Array.isArray(assets) ? assets : [];
+
+      // 2. Add your desired timeout to show the LoadingSkeleton
+      setTimeout(() => {
+        const videoCount = safeAssets.filter((a) => a.type === "video").length;
+        const docCount = safeAssets.filter((a) => a.type === "document").length;
+
+        setStats({
+          totalUploads: safeAssets.length,
+          totalVideos: videoCount,
+          totalDocuments: docCount,
+        });
+
+        setRecentContent(safeAssets.slice(0, 5));
+        setLoading(false);
+      }, 800); // Your preferred delay
+      
+    } catch (error) {
+      console.error("Dashboard load failed", error);
+      setLoading(false);
+    }
+  };
+
+  loadDashboardData();
+}, []);
 
   const statCards = [
     {

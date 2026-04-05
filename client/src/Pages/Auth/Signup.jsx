@@ -88,15 +88,18 @@ const Signup = () => {
         localStorage.setItem("user", JSON.stringify(data.user));
 
         const fetchedRole = data.user.role;
-        if (fetchedRole === "admin" || fetchedRole === "Admin")
-          navigate("/admin-dashboard");
-        else if (
-          fetchedRole === "creator" ||
-          fetchedRole === "ContentCreator" ||
-          fetchedRole === "Content Creator"
-        )
-          navigate("/creator-dashboard");
-        else navigate("/learner-dashboard");
+
+        // 1. Normalize the role (lowercase and remove spaces)
+        const cleanRole = fetchedRole.toLowerCase().replace(/\s+/g, "");
+
+        // 2. Use the correct paths that match your App.jsx
+        if (cleanRole === "admin") {
+          navigate("/admin/dashboard");
+        } else if (cleanRole === "contentcreator" || cleanRole === "creator") {
+          navigate("/creator/dashboard");
+        } else {
+          navigate("/learner/dashboard");
+        }
       } catch (err) {
         setFieldErrors({ general: err.message });
       } finally {

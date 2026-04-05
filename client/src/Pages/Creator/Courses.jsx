@@ -3,8 +3,10 @@ import { Plus, BookOpen, Edit2, Trash2 } from "lucide-react";
 import { Button, Input, Textarea, Select } from "../../components/SharedForms";
 import { Card, Modal, Toast } from "../../components/DisplayComponents";
 import { useNavigate } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 
 export default function Courses() {
+  const { searchQuery } = useOutletContext();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -59,16 +61,16 @@ export default function Courses() {
     dataToSend.append("title", formData.title);
     dataToSend.append("description", formData.description);
     dataToSend.append("category", formData.category);
-    dataToSend.append("creatorId", "1"); 
+    dataToSend.append("creatorId", "1");
     if (formData.thumbnail) {
       dataToSend.append("thumbnail", formData.thumbnail);
     }
 
     // Switch between CREATE and UPDATE based on editingId
-    const url = editingId 
-      ? `http://localhost:5000/api/courses/${editingId}` 
+    const url = editingId
+      ? `http://localhost:5000/api/courses/${editingId}`
       : "http://localhost:5000/api/courses/create";
-    
+
     const method = editingId ? "PUT" : "POST";
 
     try {
@@ -79,13 +81,20 @@ export default function Courses() {
 
       if (response.ok) {
         handleCloseModal();
-        setToastMessage(editingId ? "Course updated!" : "Course created successfully!");
-        fetchCourses(); 
+        setToastMessage(
+          editingId ? "Course updated!" : "Course created successfully!",
+        );
+        fetchCourses();
       }
     } catch (error) {
       setToastMessage("An error occurred.");
     }
   };
+  const filteredCourses = courses.filter(
+    (course) =>
+      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.category.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="max-w-7xl mx-auto">

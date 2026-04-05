@@ -47,15 +47,23 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       const userRole = data.user.role;
-      if (userRole === "admin" || userRole === "Admin")
+
+      // Convert to lowercase and remove spaces to prevent mismatch errors
+      const normalizedRole = userRole.toLowerCase().replace(/\s+/g, "");
+
+      // 3. Precise Routing
+      if (normalizedRole === "admin") {
         navigate("/admin-dashboard");
-      else if (
-        userRole === "creator" ||
-        userRole === "ContentCreator" ||
-        userRole === "Content Creator"
-      )
-        navigate("/creator-dashboard");
-      else navigate("/learner-dashboard");
+      } else if (
+        normalizedRole === "contentcreator" ||
+        normalizedRole === "creator"
+      ) {
+        // Matches your Creator routes defined in App.jsx
+        navigate("/creator/dashboard");
+      } else {
+        // Default for "learner" or any other role
+        navigate("/learner-dashboard");
+      }
     } catch (err) {
       setFieldErrors({ password: err.message });
     } finally {
@@ -83,15 +91,19 @@ const Login = () => {
         localStorage.setItem("user", JSON.stringify(data.user));
 
         const userRole = data.user.role;
-        if (userRole === "admin" || userRole === "Admin")
-          navigate("/admin-dashboard");
-        else if (
-          userRole === "creator" ||
-          userRole === "ContentCreator" ||
-          userRole === "Content Creator"
-        )
-          navigate("/creator-dashboard");
-        else navigate("/learner-dashboard");
+        const normalizedRole = userRole.toLowerCase().replace(/\s+/g, "");
+
+        if (normalizedRole === "admin") {
+          navigate("/admin/dashboard");
+        } else if (
+          normalizedRole === "contentcreator" ||
+          normalizedRole === "creator"
+        ) {
+          navigate("/creator/dashboard");
+        } else {
+          // Default for Learners
+          navigate("/learner/dashboard");
+        }
       } catch (err) {
         setFieldErrors({ password: err.message });
       } finally {
