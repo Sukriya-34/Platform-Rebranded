@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios"; // Import axios for the progress bar
+import axios from "axios";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { Card } from "../../components/DisplayComponents";
 import {
@@ -19,9 +19,11 @@ export default function UploadContent() {
     category: "",
     courseId: "",
     file: null,
+    videoUrl: "",
+    isFreePreview: false,
   });
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0); // The Green Line state
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const categories = [
@@ -48,7 +50,8 @@ export default function UploadContent() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.file) return alert("Please select a file");
+    if (!formData.file && !formData.videoUrl)
+      return alert("Please select a file or paste a link");
 
     setUploading(true);
     setUploadProgress(0);
@@ -59,10 +62,16 @@ export default function UploadContent() {
     data.append("courseId", formData.courseId);
     data.append("category", formData.category);
     data.append("type", contentType);
-    data.append(contentType, formData.file);
+    data.append("isFreePreview", formData.isFreePreview);
+
+    // Safety check to ensure we only send one source
+    if (formData.file) {
+      data.append(contentType, formData.file);
+    } else if (formData.videoUrl) {
+      data.append("videoUrl", formData.videoUrl);
+    }
 
     try {
-      // AXIOS handles the progress bar logic here
       const response = await axios.post(
         "http://localhost:5000/api/courses/upload-content",
         data,
@@ -71,7 +80,7 @@ export default function UploadContent() {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total,
             );
-            setUploadProgress(percentCompleted); // This moves the green line!
+            setUploadProgress(percentCompleted);
           },
         },
       );
@@ -94,6 +103,8 @@ export default function UploadContent() {
       category: "",
       courseId: "",
       file: null,
+      videoUrl: "",
+      isFreePreview: false,
     });
     setUploadProgress(0);
     setUploadSuccess(false);
@@ -148,11 +159,52 @@ export default function UploadContent() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <UploadBox
-              type={contentType}
-              accept={contentType === "video" ? "video/*" : ".pdf,.doc,.docx"}
-              onFileSelect={(f) => setFormData({ ...formData, file: f })}
-            />
+            {contentType === "video" && (
+              <div className="bg-porcelain/50 p-6 rounded-2xl border border-dashed border-soft-linen text-center">
+                <p className="text-xs font-bold text-soft-periwinkle uppercase tracking-widest mb-4">
+                  Paste YouTube Link
+                </p>
+                <div className="mb-4">
+                  <Input
+                    name="videoUrl"
+                    placeholder="e.g. https://www.youtube.com/watch?v=..."
+                    value={formData.videoUrl || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        videoUrl: e.target.value,
+                        file: null,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center my-6 opacity-30">
+                  <div className="flex-1 border-t border-ink-black"></div>
+                  <span className="px-4 text-xs font-bold uppercase">OR</span>
+                  <div className="flex-1 border-t border-ink-black"></div>
+                </div>
+
+                <p className="text-xs font-bold text-lavender-grey uppercase tracking-widest mb-4">
+                  Upload from Computer
+                </p>
+                <UploadBox
+                  type="video"
+                  accept="video/*"
+                  onFileSelect={(f) =>
+                    setFormData({ ...formData, file: f, videoUrl: "" })
+                  }
+                />
+              </div>
+            )}
+
+            {contentType === "document" && (
+              <UploadBox
+                type="document"
+                accept=".pdf,.doc,.docx"
+                onFileSelect={(f) => setFormData({ ...formData, file: f })}
+              />
+            )}
 
             <Input
               label="Title"
@@ -199,11 +251,28 @@ export default function UploadContent() {
               />
             </div>
 
-            {/* THE GREEN PROGRESS BAR IS BACK! */}
+            <div className="flex items-center gap-3 bg-porcelain p-4 border border-soft-linen rounded-xl">
+              <input
+                type="checkbox"
+                id="isFreePreview"
+                checked={formData.isFreePreview}
+                onChange={(e) =>
+                  setFormData({ ...formData, isFreePreview: e.target.checked })
+                }
+                className="w-5 h-5 text-soft-periwinkle bg-white border-soft-linen rounded focus:ring-soft-periwinkle focus:ring-2 cursor-pointer"
+              />
+              <label
+                htmlFor="isFreePreview"
+                className="text-sm border-soft-linen font-bold text-ink-black cursor-pointer"
+              >
+                Make this content available as a Free Preview
+              </label>
+            </div>
+
             {uploading && (
               <div className="space-y-2 pt-2">
                 <div className="flex justify-between text-sm text-lavender-grey">
-                  <span>Uploading to Cloudinary...</span>
+                  <span>Uploading Content...</span>
                   <span className="font-bold text-soft-periwinkle">
                     {uploadProgress}%
                   </span>
@@ -226,7 +295,10 @@ export default function UploadContent() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={!formData.file || uploading}>
+              <Button
+                type="submit"
+                disabled={(!formData.file && !formData.videoUrl) || uploading}
+              >
                 {uploading ? "Processing..." : "Upload Content"}
               </Button>
             </div>

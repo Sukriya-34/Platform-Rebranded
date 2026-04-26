@@ -14,50 +14,122 @@ enum UserRole {
   Admin
 }
 
-
-
 model User {
-  id            Int     @id @default(autoincrement())
-  fullName      String  
-  email         String  @unique
-  password      String
+  id       Int    @id @default(autoincrement())
+  fullName String
+  email    String @unique
+  password String
 
-  role          UserRole @default(Learner)
-  createdAt     DateTime @default(now())
+  role      UserRole @default(Learner)
+  createdAt DateTime @default(now())
 
-  isVerified    Boolean  @default(false) //everyone starts as unverifed
-  otpCode       String?  // The 6-digit code
-  otpExpiry     DateTime? // when the code expires
+  isVerified Boolean   @default(false) //everyone starts as unverifed
+  otpCode    String? // The 6-digit code
+  otpExpiry  DateTime? // when the code expires
 
-  courses       Course[]
-
+  courses     Course[]
+  enrollments Enrollment[]
+  progress    UserProgress[]
+  notes       Note[]
 }
 
 model Course {
-  id           String     @id @default(uuid())
-  title        String        
+  id           String       @id @default(uuid())
+  title        String
   description  String
   category     String
   thumbnailUrl String?
   creatorId    Int
-  creator      User       @relation(fields: [creatorId], references: [id])
-  videos      Video[]
-  documents   Document[]
-  createdAt   DateTime   @default(now())
+  creator      User         @relation(fields: [creatorId], references: [id])
+  videos       Video[]
+  documents    Document[]
+  createdAt    DateTime     @default(now())
+  enrollments  Enrollment[]
+
+  quizzes Quiz[]
 }
+
 model Video {
-  id          String   @id @default(uuid())
-  title       String
-  videoUrl    String   // This will store the file path of the uploaded video
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  title     String
+  videoUrl      String // This will store the file path of the uploaded video
+  courseId      String
+  isFreePreview Boolean  @default(false)
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  progress UserProgress[]
 }
+
 model Document {
-  id          String   @id @default(uuid())
-  title       String
-  docUrl      String   // This will store the file path of the PDF/Doc
+  id        String   @id @default(uuid())
+  title     String
+  docUrl        String // This will store the file path of the PDF/Doc
+  courseId      String
+  isFreePreview Boolean  @default(false)
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+}
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  userId    Int
+  courseId  String
+  progress  Int      @default(0) // Tracks percentage 0 to 100
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // A user can only enroll in a specific course once
+  @@unique([userId, courseId])
+}
+
+model Quiz {
+  id        String     @id @default(uuid())
+  courseId  String
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+}
+
+model Question {
+  id            String   @id @default(uuid())
+  quizId        String
+  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  questionText  String
+  options       String[] // Array of choices
+  correctAnswer Int // Index of the correct option
+  hint          String? // Optional hint for missed questions
+}
+
+model UserProgress {
+  id          String  @id @default(uuid())
+  userId      Int
+  videoId     String?
+  docId       String?
+  quizId      String?
   courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  isCompleted Boolean @default(false)
+  user        User    @relation(fields: [userId], references: [id])
+  video       Video?   @relation(fields: [videoId], references: [id])
+  
+  // Note: we track these loosely
+  
+  createdAt DateTime @default(now())
+
+  // Removed unique constraint to allow multiple types of progress
+
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    Int
+  videoId   String?
+  docId     String?
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

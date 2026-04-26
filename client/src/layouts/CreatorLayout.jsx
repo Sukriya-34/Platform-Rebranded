@@ -1,13 +1,27 @@
 import React, { useState } from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
-import { Search, Bell } from "lucide-react";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Search, Bell, LogOut } from "lucide-react";
 
 export default function CreatorLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const path = location.pathname;
 
   // 1. Just track what the user types. No navigation needed!
   const [searchQuery, setSearchQuery] = useState("");
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [user, setUser] = useState(null);
+
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user from local storage");
+      }
+    }
+  }, []);
 
   return (
     <div className="flex h-screen w-full bg-porcelain text-ink-black font-poppins overflow-hidden">
@@ -31,6 +45,7 @@ export default function CreatorLayout() {
               { name: "My Courses", to: "/creator/courses" },
               { name: "Upload Content", to: "/creator/upload" },
               { name: "Manage Content", to: "/creator/manage" },
+              { name: "Manage Quizzes", to: "/creator/quizzes" },
             ].map((item) => (
               <Link
                 key={item.to}
@@ -51,14 +66,14 @@ export default function CreatorLayout() {
         <div className="p-6 border-t border-gray-800 bg-ink-black shrink-0">
           <div className="flex items-center gap-4 px-2 py-2">
             <div className="w-12 h-12 bg-soft-periwinkle rounded-full flex items-center justify-center text-base font-bold text-white shadow-sm shrink-0">
-              CC
+              {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "C"}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate">
-                Content Creator
+                {user?.fullName || "Content Creator"}
               </p>
               <p className="text-xs text-warm-taupe truncate">
-                creator@platfrm.x
+                {user?.email || "creator@platfrm.x"}
               </p>
             </div>
           </div>
@@ -85,9 +100,33 @@ export default function CreatorLayout() {
               <Bell size={24} />
               <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
             </button>
-            <button className="w-10 h-10 bg-soft-periwinkle rounded-full flex items-center justify-center text-white font-bold shadow-md cursor-pointer">
-              CC
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="w-10 h-10 bg-soft-periwinkle rounded-full flex items-center justify-center text-white font-bold shadow-md cursor-pointer hover:bg-soft-periwinkle/90 transition-colors"
+              >
+                {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "C"}
+              </button>
+              
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-3 w-48 bg-white border border-soft-linen rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
+                  <div className="px-4 py-2 border-b border-soft-linen mb-2">
+                     <p className="text-sm font-bold text-ink-black truncate">{user?.fullName || "Content Creator"}</p>
+                     <p className="text-[10px] uppercase font-bold text-warm-taupe truncate">{user?.role || "Creator"}</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      localStorage.removeItem("token");
+                      localStorage.removeItem("user");
+                      navigate("/login");
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2 transition-colors font-medium rounded-b-2xl"
+                  >
+                    <LogOut size={16} /> Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

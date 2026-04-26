@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Layouts
+import PublicLayout from "./layouts/PublicLayout";
 import CreatorLayout from "./layouts/CreatorLayout";
 import LearnerLayout from "./layouts/LearnerLayout";
 
@@ -18,12 +19,19 @@ import Dashboard from "./Pages/Creator/Dashboard";
 import Courses from "./Pages/Creator/Courses";
 import UploadContent from "./Pages/Creator/UploadContent";
 import ManageContent from "./Pages/Creator/ManageContent";
+import ManageQuiz from "./Pages/Creator/ManageQuiz";
 import CourseView from "./Pages/Creator/CourseView";
 
 // Learner Pages
 import LearnerDashboard from "./Pages/Learner/Dashboard";
 import LearnerCourseView from "./Pages/Learner/CourseView";
 import MyLearning from "./Pages/Learner/MyLearning";
+import YoutubeView from "./Pages/Learner/YoutubeView";
+import QuizPage from "./Pages/Learner/QuizPage";
+import Home from "./Pages/Home";
+import PublicCourses from "./Pages/Public/Courses";
+import PublicCourseView from "./Pages/Public/CourseView";
+import About from "./Pages/Public/About";
 
 export default function App() {
   // 1. Preserve your original auth checks
@@ -42,8 +50,12 @@ export default function App() {
     <BrowserRouter>
       <div className="w-full h-full">
         <Routes>
-          {/* Default Route */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<PublicLayout />}>
+            <Route index element={<Home />} />
+            <Route path="about" element={<About />} />
+            <Route path="courses" element={<PublicCourses />} />
+            <Route path="courses/:id" element={<PublicCourseView />} />
+          </Route>
 
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
@@ -52,6 +64,7 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/quiz/:id" element={<QuizPage />} />
 
           {/* Creator Routes Wrapped in the Layout */}
           <Route path="/creator" element={<CreatorLayout />}>
@@ -61,6 +74,7 @@ export default function App() {
             <Route path="courses/:id" element={<CourseView />} />
             <Route path="upload" element={<UploadContent />} />
             <Route path="manage" element={<ManageContent />} />
+            <Route path="quizzes" element={<ManageQuiz />} />
           </Route>
 
           {/* Learner Routes Wrapped in the Layout */}
@@ -69,6 +83,7 @@ export default function App() {
             <Route path="dashboard" element={<LearnerDashboard />} />
             <Route path="my-courses" element={<MyLearning />} />
             <Route path="courses/:id" element={<LearnerCourseView />} />
+            <Route path="external-video/:videoId" element={<YoutubeView />} />
           </Route>
 
           {/* 404 Route */}

@@ -153,29 +153,31 @@ export function EditContentModal({
   onShowToast,
 }) {
   const [formData, setFormData] = useState({
-    title: content?.title || "",
-    description: content?.description || "",
-    category: content?.category || "",
+    title: "",
     file: null,
+    videoUrl: "",
   });
   const [saving, setSaving] = useState(false);
 
-  const categories = [
-    { value: "Web", label: "Web" },
-    { value: "Design", label: "Design" },
-  ];
+  useEffect(() => {
+    if (content) {
+      setFormData({
+        title: content.title || "",
+        file: null,
+        videoUrl: "",
+      });
+    }
+  }, [content]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.title.trim()) return;
     try {
       setSaving(true);
-      setTimeout(() => {
-        onSave(formData);
-        setSaving(false);
-        onShowToast("Content updated successfully!", "success");
-      }, 1000);
+      await onSave(formData);
     } catch (error) {
       onShowToast("Failed to update content", "error");
+    } finally {
       setSaving(false);
     }
   };
@@ -203,12 +205,23 @@ export function EditContentModal({
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="bg-porcelain/50 p-6 rounded-2xl border border-dashed border-soft-linen">
           <p className="text-xs font-bold text-soft-periwinkle uppercase tracking-widest mb-4">
-            Update Media Asset
+            Replace Media Asset (Optional)
           </p>
           <UploadBox
             type={content?.type || "video"}
-            onFileSelect={(f) => setFormData({ ...formData, file: f })}
+            onFileSelect={(f) => setFormData({ ...formData, file: f, videoUrl: "" })}
           />
+          {content?.type === "video" && (
+            <div className="mt-4 pt-4 border-t border-soft-linen">
+              <p className="text-xs font-bold text-lavender-grey uppercase mb-2">Or Paste an Embed URL</p>
+              <Input
+                name="videoUrl"
+                placeholder="e.g. https://www.youtube.com/watch?v=..."
+                value={formData.videoUrl}
+                onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value, file: null })}
+              />
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -219,25 +232,6 @@ export function EditContentModal({
             onChange={(e) =>
               setFormData({ ...formData, title: e.target.value })
             }
-            required
-          />
-          <Textarea
-            label="Description"
-            name="description"
-            value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
-            required
-          />
-          <Select
-            label="Category"
-            name="category"
-            value={formData.category}
-            onChange={(e) =>
-              setFormData({ ...formData, category: e.target.value })
-            }
-            options={categories}
             required
           />
         </div>

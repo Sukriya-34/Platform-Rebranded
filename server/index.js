@@ -5,7 +5,10 @@ import dotenv from "dotenv";
 
 import authRoutes from "./routes/auth.js";
 import courseRoutes from "./routes/course.js";
-
+import learnerRoutes from "./routes/learner.js"; 
+import searchRoutes from "./routes/search.js";
+import quizRoutes from "./routes/quiz.js";
+import uploadQuizRoutes from "./routes/upload-quiz.js";
 
 dotenv.config();
 const app = express();
@@ -27,6 +30,10 @@ app.use("/api", authRoutes);
 app.use("/uploads", express.static("uploads"));
 
 app.use("/api/courses", courseRoutes);
+app.use("/api/learner", learnerRoutes); 
+app.use("/api/search", searchRoutes);
+app.use("/api/quiz", quizRoutes);
+app.use("/api/upload-quiz", uploadQuizRoutes);
 
 const PORT = process.env.PORT || 5000;
 

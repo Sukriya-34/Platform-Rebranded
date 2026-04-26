@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
-// Added Edit2 to the imports below
 import { Video, FileText, Trash2, Search, Edit2 } from "lucide-react";
-import { Card, Toast, Modal, EditContentModal } from "../../components/DisplayComponents";
+import {
+  Card,
+  Toast,
+  Modal,
+  EditContentModal,
+} from "../../components/DisplayComponents";
 import { Button } from "../../components/SharedForms";
 import { useOutletContext } from "react-router-dom";
 
@@ -11,6 +15,7 @@ export default function ManageContent() {
   const [editingAsset, setEditingAsset] = useState(null);
   const [deletingAsset, setDeletingAsset] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
   const { searchQuery = "" } = useOutletContext() || {};
 
   const fetchAssets = async () => {
@@ -19,7 +24,6 @@ export default function ManageContent() {
         "http://localhost:5000/api/courses/all-assets",
       );
       const data = await response.json();
-      // Ensure data is an array before setting state
       setAssets(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching assets:", error);
@@ -42,7 +46,9 @@ export default function ManageContent() {
       );
 
       if (response.ok) {
-        setToastMessage(`${deletingAsset.type === "video" ? "Video" : "Document"} deleted.`);
+        setToastMessage(
+          `${deletingAsset.type === "video" ? "Video" : "Document"} deleted.`,
+        );
         fetchAssets();
       } else {
         setToastMessage("Failed to delete asset.");
@@ -55,11 +61,24 @@ export default function ManageContent() {
     }
   };
 
-  // Safe filter logic to prevent "filter is not a function" errors
   const filteredAssets = Array.isArray(assets)
-    ? assets.filter((asset) =>
-        asset.title?.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+    ? assets.filter((asset) => {
+        const matchesSearch = asset.title
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const matchesCourse = selectedCourseId
+          ? asset.course?.id === selectedCourseId
+          : true;
+        return matchesSearch && matchesCourse;
+      })
+    : [];
+
+  const uniqueCourses = Array.isArray(assets)
+    ? [
+        ...new Map(
+          assets.filter((a) => a.course).map((a) => [a.course.id, a.course]),
+        ).values(),
+      ]
     : [];
 
   return (
@@ -72,6 +91,20 @@ export default function ManageContent() {
           <p className="text-lavender-grey font-medium">
             Manage all your uploaded videos and documents.
           </p>
+        </div>
+        <div className="min-w-62.5">
+          <select
+            value={selectedCourseId}
+            onChange={(e) => setSelectedCourseId(e.target.value)}
+            className="w-full bg-white border border-soft-linen rounded-xl px-4 py-3 text-sm text-ink-black focus:border-soft-periwinkle focus:ring-1 focus:ring-soft-periwinkle outline-none transition-all shadow-sm"
+          >
+            <option value="">All Courses</option>
+            {uniqueCourses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -121,7 +154,6 @@ export default function ManageContent() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        {/* Action Buttons */}
                         <button
                           className="p-2 text-lavender-grey hover:text-soft-periwinkle hover:bg-porcelain rounded-xl transition-all opacity-0 group-hover:opacity-100"
                           onClick={(e) => {
@@ -168,10 +200,34 @@ export default function ManageContent() {
         isOpen={!!editingAsset}
         content={editingAsset}
         onClose={() => setEditingAsset(null)}
-        onSave={(data) => {
-          // You can implement actual backend API save logic here later
-          setEditingAsset(null);
-          // fetchAssets(); 
+        onSave={async (data) => {
+          const formData = new FormData();
+          formData.append("title", data.title);
+
+          // CRITICAL FIX: Ensure we only send one or the other
+          if (data.file) {
+            formData.append(editingAsset.type, data.file);
+            formData.append("videoUrl", ""); // Clear URL if a file is uploaded
+          } else if (data.videoUrl) {
+            formData.append("videoUrl", data.videoUrl);
+          }
+
+          const response = await fetch(
+            `http://localhost:5000/api/courses/asset/${editingAsset.type}/${editingAsset.id}`,
+            {
+              method: "PUT",
+              body: formData,
+            },
+          );
+
+          if (response.ok) {
+            setEditingAsset(null);
+            fetchAssets();
+            setToastMessage("Content updated successfully!");
+          } else {
+            setToastMessage("Failed to update content");
+            throw new Error("Update failed");
+          }
         }}
         onShowToast={(msg, type) => setToastMessage(msg)}
       />
@@ -184,11 +240,15 @@ export default function ManageContent() {
         size="small"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setDeletingAsset(null)} disabled={isDeleting}>
+            <Button
+              variant="secondary"
+              onClick={() => setDeletingAsset(null)}
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
-            <Button 
-              onClick={handleDeleteConfirm} 
+            <Button
+              onClick={handleDeleteConfirm}
               disabled={isDeleting}
               className="bg-red-500 hover:bg-red-600 border-none text-white shadow-lg shadow-red-500/20 px-8"
             >
@@ -198,8 +258,10 @@ export default function ManageContent() {
         }
       >
         <p className="text-ink-black/80 font-medium leading-relaxed">
-          Are you sure you want to delete <span className="font-bold">"{deletingAsset?.title}"</span>? 
-          This action cannot be undone and will permanently remove this {deletingAsset?.type} from the library.
+          Are you sure you want to delete{" "}
+          <span className="font-bold">"{deletingAsset?.title}"</span>? This
+          action cannot be undone and will permanently remove this{" "}
+          {deletingAsset?.type} from the library.
         </p>
       </Modal>
     </div>

@@ -12,6 +12,7 @@ export default function Courses() {
   const [showCreate, setShowCreate] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [editingId, setEditingId] = useState(null); // Track if we are editing
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -57,6 +58,9 @@ export default function Courses() {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     const dataToSend = new FormData();
     dataToSend.append("title", formData.title);
     dataToSend.append("description", formData.description);
@@ -88,6 +92,8 @@ export default function Courses() {
       }
     } catch (error) {
       setToastMessage("An error occurred.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
   const filteredCourses = courses.filter(
@@ -204,8 +210,17 @@ export default function Courses() {
           <Select
             label="Category"
             options={[
-              { value: "Web", label: "Web" },
+              { value: "Development", label: "Development" },
+              { value: "Web Development", label: "Web Development" },
+              { value: "Mobile Development", label: "Mobile Development" },
               { value: "Programming", label: "Programming" },
+              { value: "Backend", label: "Backend" },
+              { value: "Data Science", label: "Data Science" },
+              { value: "Design", label: "Design" },
+              { value: "Business", label: "Business" },
+              { value: "Marketing", label: "Marketing" },
+              { value: "IT & Software", label: "IT & Software" },
+              { value: "Personal Development", label: "Personal Development" },
             ]}
             value={formData.category}
             onChange={(e) =>
@@ -232,8 +247,8 @@ export default function Courses() {
             <Button variant="secondary" onClick={handleCloseModal}>
               Cancel
             </Button>
-            <Button type="submit">
-              {editingId ? "Update Course" : "Publish Draft"}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Processing..." : (editingId ? "Update Course" : "Publish Draft")}
             </Button>
           </div>
         </form>
