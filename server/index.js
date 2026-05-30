@@ -9,6 +9,11 @@ import learnerRoutes from "./routes/learner.js";
 import searchRoutes from "./routes/search.js";
 import quizRoutes from "./routes/quiz.js";
 import uploadQuizRoutes from "./routes/upload-quiz.js";
+import profileRoutes from "./routes/profile.js";
+import adminRoutes from "./routes/admin.js";
+import chatRoutes from "./routes/chat.js";
+import notificationRoutes from "./routes/notification.js";
+import paymentRoutes from "./routes/payment.js";
 
 dotenv.config();
 const app = express();
@@ -34,6 +39,11 @@ app.use("/api/learner", learnerRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/upload-quiz", uploadQuizRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/payment", paymentRoutes);
 
 const PORT = process.env.PORT || 5000;
 

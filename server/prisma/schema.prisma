@@ -19,6 +19,9 @@ model User {
   fullName String
   email    String @unique
   password String
+  avatar   String?
+  bio      String?
+  skills   String?
 
   role      UserRole @default(Learner)
   createdAt DateTime @default(now())
@@ -27,10 +30,15 @@ model User {
   otpCode    String? // The 6-digit code
   otpExpiry  DateTime? // when the code expires
 
-  courses     Course[]
-  enrollments Enrollment[]
-  progress    UserProgress[]
-  notes       Note[]
+  courses          Course[]
+  enrollments      Enrollment[]
+  progress         UserProgress[]
+  notes            Note[]
+  activityLogs     ActivityLog[]
+  savedCourses     SavedCourse[]
+  notifications    Notification[]
+  sentMessages     ChatMessage[]   @relation("SentMessages")
+  receivedMessages ChatMessage[]   @relation("ReceivedMessages")
 }
 
 model Course {
@@ -38,6 +46,7 @@ model Course {
   title        String
   description  String
   category     String
+  classification String     @default("Skills")
   thumbnailUrl String?
   creatorId    Int
   creator      User         @relation(fields: [creatorId], references: [id])
@@ -45,16 +54,20 @@ model Course {
   documents    Document[]
   createdAt    DateTime     @default(now())
   enrollments  Enrollment[]
+  price        Int          @default(0)
+  isFlagged    Boolean      @default(false)
 
-  quizzes Quiz[]
+  quizzes      Quiz[]
+  savedCourses SavedCourse[]
 }
 
 model Video {
-  id        String   @id @default(uuid())
-  title     String
+  id            String   @id @default(uuid())
+  title         String
   videoUrl      String // This will store the file path of the uploaded video
   courseId      String
   isFreePreview Boolean  @default(false)
+  status        String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
   course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
 
@@ -62,11 +75,12 @@ model Video {
 }
 
 model Document {
-  id        String   @id @default(uuid())
-  title     String
+  id            String   @id @default(uuid())
+  title         String
   docUrl        String // This will store the file path of the PDF/Doc
   courseId      String
   isFreePreview Boolean  @default(false)
+  status        String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
   course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
 }
@@ -112,14 +126,13 @@ model UserProgress {
   courseId    String
   isCompleted Boolean @default(false)
   user        User    @relation(fields: [userId], references: [id])
-  video       Video?   @relation(fields: [videoId], references: [id])
-  
+  video       Video?  @relation(fields: [videoId], references: [id])
+
   // Note: we track these loosely
-  
+
   createdAt DateTime @default(now())
 
   // Removed unique constraint to allow multiple types of progress
-
 }
 
 model Note {
@@ -130,6 +143,47 @@ model Note {
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    Int
+  action    String // e.g., "SEARCH", "VIEW_COURSE", "COMPLETE_RESOURCE"
+  metadata  String? // search keywords, or course category
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SavedCourse {
+  id        String   @id @default(uuid())
+  userId    Int
+  courseId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    Int
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id         String   @id @default(uuid())
+  senderId   Int
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId Int
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  message    String
+  createdAt  DateTime @default(now())
 }

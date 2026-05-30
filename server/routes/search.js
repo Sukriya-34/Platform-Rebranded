@@ -1,6 +1,7 @@
 import express from "express";
 import axios from "axios";
 import dotenv from "dotenv";
+import prisma from "../db.js";
 
 dotenv.config();
 const router = express.Router();
@@ -12,10 +13,32 @@ router.get("/external", async (req, res) => {
   if (!q) return res.status(400).json({ message: "Search query is required" });
 
   try {
+    let localData = [];
     let videoData = [];
     let docData = [];
 
-    // 1. Fetch from YouTube
+    // 1. Fetch from Local Database
+    try {
+      localData = await prisma.course.findMany({
+        where: {
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+            { category: { contains: q, mode: 'insensitive' } },
+            { classification: { contains: q, mode: 'insensitive' } }
+          ]
+        },
+        include: {
+          _count: {
+            select: { videos: true }
+          }
+        }
+      });
+    } catch (err) {
+      console.error("Local Course Fetch Error", err.message);
+    }
+
+    // 2. Fetch from YouTube
     if (YT_KEY) {
       try {
         const ytRes = await axios.get(
@@ -33,7 +56,7 @@ router.get("/external", async (req, res) => {
       }
     }
 
-    // 2. Fetch from OpenLibrary (Educational Books/Docs)
+    // 3. Fetch from OpenLibrary (Educational Books/Docs)
     try {
       const dbRes = await axios.get(
         `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=4`
@@ -49,10 +72,10 @@ router.get("/external", async (req, res) => {
       console.error("OpenLibrary Fetch Error", err.message);
     }
 
-    res.status(200).json({ videos: videoData, documents: docData });
+    res.status(200).json({ localCourses: localData, videos: videoData, documents: docData });
   } catch (error) {
     console.error("Search API Error:", error.message);
-    res.status(500).json({ message: "Failed to search external resources." });
+    res.status(500).json({ message: "Failed to search resources." });
   }
 });
 

@@ -18,6 +18,8 @@ export default function Courses() {
     title: "",
     description: "",
     category: "",
+    classification: "Skills",
+    price: 0,
     thumbnail: null,
   });
 
@@ -43,6 +45,8 @@ export default function Courses() {
       title: course.title,
       description: course.description,
       category: course.category,
+      classification: course.classification || "Skills",
+      price: course.price || 0,
       thumbnail: null, // Only update if they pick a new file
     });
     setShowCreate(true);
@@ -52,7 +56,7 @@ export default function Courses() {
   const handleCloseModal = () => {
     setShowCreate(false);
     setEditingId(null);
-    setFormData({ title: "", description: "", category: "", thumbnail: null });
+    setFormData({ title: "", description: "", category: "", classification: "Skills", price: 0, thumbnail: null });
   };
 
   const handleFormSubmit = async (e) => {
@@ -65,7 +69,10 @@ export default function Courses() {
     dataToSend.append("title", formData.title);
     dataToSend.append("description", formData.description);
     dataToSend.append("category", formData.category);
-    dataToSend.append("creatorId", "1");
+    dataToSend.append("classification", formData.classification);
+    dataToSend.append("price", formData.price.toString());
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    dataToSend.append("creatorId", user.id ? user.id.toString() : "1");
     if (formData.thumbnail) {
       dataToSend.append("thumbnail", formData.thumbnail);
     }
@@ -225,6 +232,29 @@ export default function Courses() {
             value={formData.category}
             onChange={(e) =>
               setFormData({ ...formData, category: e.target.value })
+            }
+            required
+          />
+          <Select
+            label="Curated Classification"
+            options={[
+              { value: "Academic", label: "Academic (Core Learning)" },
+              { value: "Skills", label: "Skills (Professional/Tech)" },
+              { value: "Hobbies", label: "Hobbies (Creative/Lifestyle)" },
+            ]}
+            value={formData.classification}
+            onChange={(e) =>
+              setFormData({ ...formData, classification: e.target.value })
+            }
+            required
+          />
+
+          <Input
+            label="Price - Set 0 for Free"
+            type="number"
+            value={formData.price}
+            onChange={(e) =>
+              setFormData({ ...formData, price: parseInt(e.target.value) || 0 })
             }
             required
           />

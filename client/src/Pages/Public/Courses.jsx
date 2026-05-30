@@ -163,7 +163,7 @@ function CourseCard({ course, navigate }) {
     <div onClick={() => navigate(`/courses/${course.id}`)} className="bg-white rounded-2xl border border-soft-linen overflow-hidden hover:shadow-2xl transition-all flex flex-col group cursor-pointer hover:-translate-y-1">
       <div className="relative h-44 bg-porcelain w-full overflow-hidden">
         <img 
-          src={course.thumbnailUrl || `https://picsum.photos/seed/${course.title.replace(/\s+/g, '')}/400/300`} 
+          src={course.thumbnailUrl || `https://placehold.co/400x300/e2e8f0/1e293b?text=Course`} 
           alt={course.title} 
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />

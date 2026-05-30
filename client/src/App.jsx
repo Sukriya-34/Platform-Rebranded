@@ -21,6 +21,11 @@ import UploadContent from "./Pages/Creator/UploadContent";
 import ManageContent from "./Pages/Creator/ManageContent";
 import ManageQuiz from "./Pages/Creator/ManageQuiz";
 import CourseView from "./Pages/Creator/CourseView";
+import CreatorProfileSettings from "./Pages/Creator/ProfileSettings";
+import AdminDashboard from "./Pages/Admin/Dashboard";
+import Profile from "./Pages/Learner/Profile";
+import ContributorProfile from "./Pages/Public/ContributorProfile";
+import Chat from "./Pages/Learner/Chat";
 
 // Learner Pages
 import LearnerDashboard from "./Pages/Learner/Dashboard";
@@ -32,6 +37,8 @@ import Home from "./Pages/Home";
 import PublicCourses from "./Pages/Public/Courses";
 import PublicCourseView from "./Pages/Public/CourseView";
 import About from "./Pages/Public/About";
+import Blog from "./Pages/Public/Blog";
+import Contact from "./Pages/Public/Contact";
 
 export default function App() {
   // 1. Preserve your original auth checks
@@ -53,8 +60,11 @@ export default function App() {
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
             <Route path="about" element={<About />} />
+            <Route path="blog" element={<Blog />} />
+            <Route path="contact-us" element={<Contact />} />
             <Route path="courses" element={<PublicCourses />} />
             <Route path="courses/:id" element={<PublicCourseView />} />
+            <Route path="contributor/:creatorId" element={<ContributorProfile />} />
           </Route>
 
           {/* Auth Routes */}
@@ -65,6 +75,7 @@ export default function App() {
           <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/quiz/:id" element={<QuizPage />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
           {/* Creator Routes Wrapped in the Layout */}
           <Route path="/creator" element={<CreatorLayout />}>
@@ -75,6 +86,7 @@ export default function App() {
             <Route path="upload" element={<UploadContent />} />
             <Route path="manage" element={<ManageContent />} />
             <Route path="quizzes" element={<ManageQuiz />} />
+            <Route path="profile" element={<CreatorProfileSettings />} />
           </Route>
 
           {/* Learner Routes Wrapped in the Layout */}
@@ -84,6 +96,8 @@ export default function App() {
             <Route path="my-courses" element={<MyLearning />} />
             <Route path="courses/:id" element={<LearnerCourseView />} />
             <Route path="external-video/:videoId" element={<YoutubeView />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="chat" element={<Chat />} />
           </Route>
 
           {/* 404 Route */}

@@ -41,17 +41,25 @@ const upload = multer({ storage }).fields([
 
 // --- 1. SPECIAL COMMANDS ---
 
-router.get("/all-assets", async (req, res) => {
+router.get("/creator/:creatorId/assets", async (req, res) => {
   try {
+    const creatorId = parseInt(req.params.creatorId);
     const [videos, documents] = await Promise.all([
-      prisma.video.findMany({ include: { course: true } }),
-      prisma.document.findMany({ include: { course: true } }),
+      prisma.video.findMany({ 
+        where: { course: { creatorId: creatorId } },
+        include: { course: true } 
+      }),
+      prisma.document.findMany({ 
+        where: { course: { creatorId: creatorId } },
+        include: { course: true } 
+      }),
     ]);
     const allAssets = [
       ...videos.map((v) => ({
         id: v.id,
         title: v.title,
         type: "video",
+        status: v.status,
         course: v.course,
         date: v.createdAt,
       })),
@@ -59,6 +67,7 @@ router.get("/all-assets", async (req, res) => {
         id: d.id,
         title: d.title,
         type: "document",
+        status: d.status,
         course: d.course,
         date: d.createdAt,
       })),
@@ -140,17 +149,34 @@ router.get("/creator/:creatorId", async (req, res) => {
 });
 
 router.post("/create", upload, async (req, res) => {
-  const { title, description, category, creatorId } = req.body;
+  const { title, description, category, classification, creatorId, price } = req.body;
   const thumb = req.files?.thumbnail ? req.files.thumbnail[0].path : null;
   const course = await prisma.course.create({
     data: {
       title,
       description,
       category,
+      classification,
       thumbnailUrl: thumb,
       creatorId: Number(creatorId),
+      price: Number(price) || 0,
     },
   });
+
+  // SMART NOTIFICATIONS: Notify all Learners of the new course
+  try {
+    const learners = await prisma.user.findMany({ where: { role: 'Learner' } });
+    if (learners.length > 0) {
+       const notifications = learners.map(learner => ({
+          userId: learner.id,
+          message: `New Course Alert: "${title}" has just been published in ${category}! Check it out.`
+       }));
+       await prisma.notification.createMany({ data: notifications });
+    }
+  } catch (err) {
+    console.error("Failed to send smart notifications", err);
+  }
+
   res.json(course);
 });
 
@@ -178,6 +204,24 @@ router.post("/upload-content", upload, async (req, res) => {
           isFreePreview: isFree,
         },
       });
+
+      // SMART NOTIFICATION: Notify Learners about the new video
+      try {
+        const course = await prisma.course.findUnique({ where: { id: courseId } });
+        if (course) {
+          const learners = await prisma.user.findMany({ where: { role: 'Learner' } });
+          if (learners.length > 0) {
+            const notifications = learners.map(learner => ({
+              userId: learner.id,
+              message: `New Content Alert: A new video "${title}" was just added to "${course.title}"!`
+            }));
+            await prisma.notification.createMany({ data: notifications });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to send content upload notification", err);
+      }
+
       return res.status(201).json(newVideo);
     } else {
       const docFile = req.files?.document ? req.files.document[0] : null;
@@ -185,8 +229,31 @@ router.post("/upload-content", upload, async (req, res) => {
         return res.status(400).json({ message: "No document file" });
 
       const newDoc = await prisma.document.create({
-        data: { title, docUrl: docFile.path, courseId, isFreePreview: isFree },
+        data: {
+          title,
+          docUrl: docFile.path,
+          courseId,
+          isFreePreview: isFree,
+        },
       });
+
+      // SMART NOTIFICATION: Notify Learners about the new document
+      try {
+        const course = await prisma.course.findUnique({ where: { id: courseId } });
+        if (course) {
+          const learners = await prisma.user.findMany({ where: { role: 'Learner' } });
+          if (learners.length > 0) {
+            const notifications = learners.map(learner => ({
+              userId: learner.id,
+              message: `New Study Material: A document "${title}" was just added to "${course.title}"!`
+            }));
+            await prisma.notification.createMany({ data: notifications });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to send content upload notification", err);
+      }
+
       return res.status(201).json(newDoc);
     }
   } catch (error) {
@@ -226,7 +293,10 @@ router.get("/:id", async (req, res) => {
   try {
     const course = await prisma.course.findUnique({
       where: { id: req.params.id },
-      include: { videos: true, documents: true },
+      include: { 
+        videos: { where: { status: "APPROVED" } }, 
+        documents: { where: { status: "APPROVED" } } 
+      },
     });
     if (!course) return res.status(404).json({ message: "Not found" });
     res.json(course);
@@ -237,7 +307,7 @@ router.get("/:id", async (req, res) => {
 
 router.put("/:id", upload, async (req, res) => {
   const thumb = req.files?.thumbnail ? req.files.thumbnail[0].path : undefined;
-  const { title, description, category } = req.body;
+  const { title, description, category, classification, price } = req.body;
 
   try {
     const updated = await prisma.course.update({
@@ -246,7 +316,9 @@ router.put("/:id", upload, async (req, res) => {
         ...(title && { title }),
         ...(description && { description }),
         ...(category && { category }),
+        ...(classification && { classification }),
         ...(thumb && { thumbnailUrl: thumb }),
+        ...(price !== undefined && { price: Number(price) || 0 }),
       },
     });
     res.json(updated);

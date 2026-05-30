@@ -127,7 +127,7 @@ export default function Home() {
                  {topCourses.map((course) => (
                    <div key={course.id} onClick={() => navigate(`/courses/${course.id}`)} className="bg-white rounded-2xl border border-soft-linen overflow-hidden hover:shadow-2xl transition-all flex flex-col group cursor-pointer hover:-translate-y-1">
                       <div className="relative h-40 bg-porcelain w-full overflow-hidden">
-                        <img src={course.thumbnailUrl || `https://picsum.photos/seed/${course.title.replace(/\s+/g, '')}/400/300`} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"/>
+                        <img src={course.thumbnailUrl || `https://placehold.co/400x300/e2e8f0/1e293b?text=Course`} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"/>
                         <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-[10px] font-bold text-soft-periwinkle uppercase px-2 py-1 rounded shadow-sm">
                           {course.category}
                         </div>

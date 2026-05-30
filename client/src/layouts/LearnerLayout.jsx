@@ -1,141 +1,235 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Bell, BookOpen, LayoutDashboard, User, LogOut } from "lucide-react";
+import { Search, Bell, BookOpen, LayoutDashboard, User, LogOut, MessageSquare, Shield, Settings } from "lucide-react";
 
 export default function LearnerLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
   const [searchQuery, setSearchQuery] = useState("");
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [user, setUser] = useState(null);
 
-  React.useEffect(() => {
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifMenu, setShowNotifMenu] = useState(false);
+
+  const fetchNotifications = async (uid) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/notifications/${uid}`);
+      if (res.ok) setNotifications(await res.json());
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  const handleMarkNotificationsRead = async () => {
+    if (!user) return;
+    try {
+      await fetch(`http://localhost:5000/api/notifications/${user.id}/read`, {
+        method: "PUT"
+      });
+      fetchNotifications(user.id);
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        fetchNotifications(parsed.id);
+        const interval = setInterval(() => fetchNotifications(parsed.id), 10000);
+        return () => clearInterval(interval);
       } catch (e) {
         console.error("Failed to parse user from local storage");
       }
     }
   }, []);
 
+  const handleSearchSubmit = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      if (searchQuery.trim().length > 0) {
+        // If not on the dashboard, navigate there
+        if (!path.includes("/learner/dashboard")) {
+          navigate("/learner/dashboard");
+        }
+      }
+    }
+  };
+
   const navLinks = [
     { name: "Explore", to: "/learner/dashboard", icon: LayoutDashboard },
     { name: "My Learning", to: "/learner/my-courses", icon: BookOpen },
+    { name: "Messages", to: "/learner/chat", icon: MessageSquare },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-porcelain text-ink-black font-poppins">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-soft-linen shadow-sm px-6 py-4 flex items-center justify-between">
-        
-        {/* Logo & Brand */}
-        <Link to="/learner/dashboard" className="flex items-center shrink-0">
-          <img src="/pathway.svg" alt="Logo" className="h-8 w-auto object-contain" />
-        </Link>
-
-        {/* Center / Search Area */}
-        <div className="flex-1 max-w-2xl mx-8 hidden lg:flex items-center gap-8">
-          <nav className="flex space-x-6">
-            {navLinks.map((link) => {
-              const isActive = path.includes(link.to);
-              return (
-                <Link
-                  key={link.name}
-                  to={link.to}
-                  className={`flex items-center gap-2 text-sm font-semibold transition-all duration-300 ${
-                    isActive
-                      ? "text-soft-periwinkle border-b-2 border-soft-periwinkle"
-                      : "text-lavender-grey hover:text-ink-black"
-                  } pb-1`}
-                >
-                  <link.icon size={16} />
-                  {link.name}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Search Box */}
-          <div className="relative flex-1 group">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-lavender-grey group-focus-within:text-soft-periwinkle transition-colors" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search for courses, topics..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-porcelain/50 border border-soft-linen rounded-full py-2 pl-10 pr-4 text-sm text-ink-black focus:outline-none focus:ring-2 focus:ring-soft-periwinkle/30 focus:border-soft-periwinkle transition-all"
+    <div className="flex h-screen w-full bg-porcelain text-ink-black font-poppins overflow-hidden">
+      
+      {/* Sidebar */}
+      <aside className="w-80 bg-ink-black text-white flex flex-col shadow-lg z-10 shrink-0">
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <div className="p-8 border-b border-gray-800 flex flex-col items-start">
+            <img
+              src="/pathway.svg"
+              alt="Logo"
+              className="w-full max-w-45 h-auto object-contain mb-3"
             />
+            <span className="text-xs text-soft-periwinkle uppercase tracking-[0.3em] font-bold block">
+              Learner Portal
+            </span>
           </div>
-        </div>
 
-        {/* Right Section / Profile */}
-        <div className="flex items-center gap-4 shrink-0">
-          <button className="relative p-2 text-lavender-grey hover:text-soft-periwinkle transition-colors sm:block hidden">
-            <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          
-          <div className="relative">
-            <div 
-              className="flex items-center gap-3 pl-4 border-l border-soft-linen cursor-pointer group"
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
+          <nav className="p-4 space-y-3 mt-6">
+            {navLinks.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-3 px-6 py-4 rounded-2xl transition-all duration-200 text-lg font-semibold tracking-wide ${
+                  path.includes(item.to)
+                    ? "bg-soft-periwinkle text-white shadow-lg shadow-soft-periwinkle/20"
+                    : "text-warm-taupe hover:bg-lavender-grey/20 hover:text-white"
+                }`}
+              >
+                <item.icon size={20} />
+                {item.name}
+              </Link>
+            ))}
+            <NavLink
+              to="/learner/history"
+              className={({ isActive }) => `flex items-center gap-3 px-6 py-4 rounded-2xl transition-all duration-200 text-lg font-semibold tracking-wide ${isActive ? "bg-soft-periwinkle text-white shadow-lg shadow-soft-periwinkle/20" : "text-warm-taupe hover:bg-lavender-grey/20 hover:text-white"}`}
             >
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-bold text-ink-black leading-tight group-hover:text-soft-periwinkle transition-colors">{user?.fullName || "Student User"}</p>
-                <p className="text-[10px] uppercase font-bold text-warm-taupe tracking-wider">{user?.role || "Learner"}</p>
-              </div>
-              <button className="w-10 h-10 bg-soft-periwinkle/10 text-soft-periwinkle rounded-full flex items-center justify-center font-bold group-hover:bg-soft-periwinkle group-hover:text-white transition-colors border border-soft-periwinkle/20">
-                <User size={18} />
-              </button>
-            </div>
+              <History size={20} />
+              History
+            </NavLink>
 
-            {/* Profile Dropdown */}
-            {showProfileMenu && (
-              <div className="absolute right-0 mt-3 w-48 bg-white border border-soft-linen rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
-                <div className="px-4 py-2 border-b border-soft-linen mb-2 sm:hidden">
-                   <p className="text-sm font-bold text-ink-black">{user?.fullName || "Student User"}</p>
-                   <p className="text-[10px] uppercase font-bold text-warm-taupe">{user?.role || "Learner"}</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("user");
-                    navigate("/login");
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2 transition-colors font-medium"
-                >
-                  <LogOut size={16} /> Logout
-                </button>
-              </div>
+            {user?.role === 'Admin' && (
+              <NavLink 
+                to="/admin/dashboard"
+                className={({ isActive }) => `flex items-center gap-3 px-6 py-4 rounded-2xl transition-all duration-200 text-lg font-semibold tracking-wide mt-4 border-t border-gray-800 pt-4 ${isActive ? "bg-soft-periwinkle text-white shadow-lg shadow-soft-periwinkle/20" : "text-warm-taupe hover:bg-lavender-grey/20 hover:text-white"}`}
+              >
+                <Shield size={20} />
+                Admin Dashboard
+              </NavLink>
             )}
+          </nav>
+        </div>
+
+        {/* Profile Details at Bottom of Sidebar */}
+        <div className="p-6 border-t border-gray-800 bg-ink-black shrink-0">
+          <div className="flex items-center gap-4 px-2 py-2 mb-4">
+            <div className="w-12 h-12 bg-soft-periwinkle rounded-full flex items-center justify-center text-base font-bold text-white shadow-sm shrink-0">
+              {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">
+                {user?.fullName || "Student User"}
+              </p>
+              <p className="text-xs text-warm-taupe truncate">
+                {user?.role || "Learner"}
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Link 
+              to="/learner/profile"
+              className="w-full text-left px-4 py-2 text-sm text-warm-taupe hover:bg-gray-800 hover:text-white rounded-lg flex items-center gap-2 transition-colors font-medium"
+            >
+              <Settings size={16} /> Profile Settings
+            </Link>
+            {user?.role === "Admin" && (
+              <Link 
+                to="/admin/dashboard"
+                className="w-full text-left px-4 py-2 text-sm text-soft-periwinkle hover:bg-gray-800 rounded-lg flex items-center gap-2 transition-colors font-semibold"
+              >
+                <Shield size={16} /> Admin Command
+              </Link>
+            )}
+            <button 
+              onClick={() => {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                navigate("/login");
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 hover:text-red-300 rounded-lg flex items-center gap-2 transition-colors font-medium"
+            >
+              <LogOut size={16} /> Logout
+            </button>
           </div>
         </div>
-      </header>
+      </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col w-full relative">
-        <Outlet context={{ searchQuery }} />
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header */}
+        <header className="h-20 bg-white border-b border-soft-linen flex items-center px-10 justify-between shrink-0">
+          
+          {/* Global Search Bar */}
+          <div className="flex-1 max-w-xl">
+            <div className="flex items-center bg-porcelain px-5 py-2.5 rounded-xl border border-soft-linen focus-within:border-soft-periwinkle focus-within:ring-1 focus-within:ring-soft-periwinkle transition-all">
+              <Search size={18} className="text-lavender-grey mr-3 cursor-pointer hover:text-soft-periwinkle" onClick={handleSearchSubmit} />
+              <input
+                type="text"
+                placeholder="Search Course"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchSubmit}
+                className="bg-transparent border-none focus:outline-none text-sm w-full text-ink-black placeholder-lavender-grey"
+              />
+            </div>
+          </div>
 
-      {/* Footer (Simplified from Wireframe) */}
-      <footer className="mt-auto bg-white border-t border-soft-linen py-10 px-8 text-center text-sm text-lavender-grey">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-bold text-ink-black font-playfair">
-            PLATFORM<span className="text-soft-periwinkle">.X</span>
+          <div className="flex items-center gap-8 pl-8">
+            {/* Notifications Bell */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowNotifMenu(!showNotifMenu);
+                  if (!showNotifMenu) handleMarkNotificationsRead();
+                }}
+                className="relative p-2 text-lavender-grey hover:text-soft-periwinkle transition-colors bg-porcelain rounded-full"
+              >
+                <Bell size={20} />
+                {notifications.some(n => !n.isRead) && (
+                  <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+
+              {showNotifMenu && (
+                <div className="absolute right-0 mt-3 w-80 bg-white border border-soft-linen rounded-2xl shadow-xl py-4 z-50 animate-fadeIn text-sm">
+                  <div className="px-4 pb-2 border-b border-soft-linen mb-2 flex items-center justify-between">
+                    <span className="text-xs font-bold text-ink-black uppercase tracking-wider">Notifications</span>
+                    {notifications.some(n => !n.isRead) && <span className="w-2 h-2 bg-red-500 rounded-full"></span>}
+                  </div>
+                  <div className="max-h-60 overflow-y-auto divide-y divide-soft-linen/50 custom-scrollbar">
+                    {notifications.length === 0 ? (
+                      <p className="text-xs text-lavender-grey text-center py-6">No notifications yet.</p>
+                    ) : (
+                      notifications.map(n => (
+                        <div key={n.id} className="p-3 text-xs text-ink-black hover:bg-porcelain/30 transition-colors">
+                          <p className={n.isRead ? "text-lavender-grey" : "font-semibold"}>{n.message}</p>
+                          <span className="text-[8px] text-lavender-grey uppercase font-bold mt-1.5 block">
+                            {new Date(n.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex gap-6">
-            <Link to="#" className="hover:text-soft-periwinkle">Terms</Link>
-            <Link to="#" className="hover:text-soft-periwinkle">Privacy</Link>
-            <Link to="#" className="hover:text-soft-periwinkle">Support</Link>
-          </div>
-          <p>© 2026 Platform.x - All Rights Reserved.</p>
-        </div>
-      </footer>
+        </header>
+
+        {/* Content Outlet */}
+        <main className="flex-1 overflow-y-auto bg-porcelain relative">
+          <Outlet context={{ searchQuery }} />
+        </main>
+      </div>
     </div>
   );
 }

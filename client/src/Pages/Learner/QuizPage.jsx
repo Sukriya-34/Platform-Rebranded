@@ -60,6 +60,17 @@ export default function QuizPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, quizId: quiz.id, courseId: quiz.courseId })
       });
+      
+      // Log quiz completion to activity timeline
+      await fetch("http://localhost:5000/api/learner/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          userId, 
+          action: "COMPLETED_QUIZ", 
+          metadata: `Scored ${finalScore} on quiz` 
+        })
+      });
     } catch(err) {
       console.error("Failed to update quiz progress", err);
     }

@@ -1,0 +1,5 @@
+{
+  "livePreview.customExternalBrowser": "Edge",
+  "livePreview.openPreviewTarget": "External Browser",
+  "workbench.externalBrowser": "edge"
+}

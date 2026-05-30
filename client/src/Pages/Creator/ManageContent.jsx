@@ -20,8 +20,10 @@ export default function ManageContent() {
 
   const fetchAssets = async () => {
     try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const userId = user.id || 1;
       const response = await fetch(
-        "http://localhost:5000/api/courses/all-assets",
+        `http://localhost:5000/api/courses/creator/${userId}/assets`,
       );
       const data = await response.json();
       setAssets(Array.isArray(data) ? data : []);
@@ -145,9 +147,26 @@ export default function ManageContent() {
                       {asset.course?.title || "Unknown Course"}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-xs font-bold px-3 py-1 bg-porcelain rounded-full text-lavender-grey uppercase">
-                        {asset.type}
-                      </span>
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs font-bold px-3 py-1 bg-porcelain rounded-full text-lavender-grey uppercase">
+                          {asset.type}
+                        </span>
+                        {asset.status === 'PENDING' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-yellow-100 rounded-full text-yellow-700 uppercase">
+                            Pending
+                          </span>
+                        )}
+                        {asset.status === 'APPROVED' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-green-100 rounded-full text-green-700 uppercase">
+                            Approved
+                          </span>
+                        )}
+                        {asset.status === 'REJECTED' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-red-100 rounded-full text-red-700 uppercase">
+                            Rejected
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-lavender-grey">
                       {new Date(asset.date).toLocaleDateString()}

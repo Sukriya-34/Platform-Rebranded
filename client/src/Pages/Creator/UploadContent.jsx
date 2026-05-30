@@ -33,6 +33,8 @@ export default function UploadContent() {
     { value: "Design", label: "Design" },
     { value: "Data Science", label: "Data Science" },
     { value: "Mobile Development", label: "Mobile Development" },
+    { value: "Cooking", label: "Cooking" },
+    { value: "Culinary Arts", label: "Culinary Arts" },
   ];
 
   useEffect(() => {
