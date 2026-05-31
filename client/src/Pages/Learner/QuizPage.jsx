@@ -451,42 +451,7 @@ export default function QuizPage() {
         </div>
       </div>
 
-      {/* ---------------- RIGHT PANEL: Chatbot Placeholder ---------------- */}
-      <div className="hidden lg:flex w-[350px] xl:w-[450px] border-l border-soft-linen bg-white flex-col relative z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
-        {/* Top Navigation Tabs */}
-        <div className="flex border-b border-soft-linen bg-porcelain/30">
-          <button className="flex-1 py-5 text-sm font-bold flex items-center justify-center gap-2 text-soft-periwinkle border-b-2 border-soft-periwinkle bg-white">
-            <MessageSquare size={16} /> Chat
-          </button>
-          <button className="flex-1 py-5 text-sm font-bold flex items-center justify-center gap-2 text-lavender-grey hover:bg-porcelain/50 transition-colors">
-            <BookOpen size={16} /> Content
-          </button>
-        </div>
-        
-        {/* Chat Interface Mockup */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-           <div className="w-16 h-16 bg-porcelain rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-sm">
-             <Sparkles size={24} className="text-soft-periwinkle" />
-           </div>
-           <h3 className="font-playfair font-bold text-2xl text-ink-black mb-2">Here to help you learn</h3>
-           <p className="text-lavender-grey text-sm max-w-[250px] mx-auto leading-relaxed">
-             This space is reserved for your AI Tutor. Soon, you can ask for in-depth explanations on any assessment question.
-           </p>
-        </div>
-        
-        {/* Chat Input Placeholder */}
-        <div className="p-6 border-t border-soft-linen bg-white">
-           <div className="bg-porcelain rounded-2xl p-4 flex items-center gap-3">
-              <span className="text-lavender-grey/50 text-sm flex-1 cursor-not-allowed hidden md:block">Ask me anything about the material...</span>
-              <div className="w-8 h-8 rounded-full bg-soft-periwinkle/20 flex items-center justify-center opacity-50 shrink-0">
-                 <ArrowRight size={14} className="text-soft-periwinkle" />
-              </div>
-           </div>
-           <div className="flex items-center justify-center mt-4">
-              <span className="text-xs text-lavender-grey/60 font-semibold uppercase tracking-wider">AI Integration Pending</span>
-           </div>
-        </div>
-      </div>
+
       </div>
     </div>
   );

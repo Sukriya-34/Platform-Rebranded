@@ -14,7 +14,6 @@ export default function PublicLayout() {
           <nav className="hidden md:flex gap-8 text-sm font-semibold text-lavender-grey">
             <Link to="/" className="hover:text-ink-black transition-colors">Home</Link>
             <Link to="/courses" className="hover:text-ink-black transition-colors">Courses</Link>
-            <Link to="/blog" className="hover:text-ink-black transition-colors">Blog</Link>
             <Link to="/about" className="hover:text-ink-black transition-colors">About</Link>
             <Link to="/contact" className="hover:text-ink-black transition-colors">Contact us</Link>
           </nav>
@@ -54,7 +53,6 @@ export default function PublicLayout() {
                <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
                <li><Link to="/courses" className="hover:text-white transition-colors">Courses</Link></li>
                <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
-               <li><Link to="/blog" className="hover:text-white transition-colors">Blog</Link></li>
              </ul>
           </div>
 

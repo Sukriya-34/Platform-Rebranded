@@ -163,6 +163,15 @@ router.post("/create", upload, async (req, res) => {
     },
   });
 
+  // Audit Log
+  await prisma.activityLog.create({
+    data: {
+      userId: Number(creatorId),
+      action: "COURSE_CREATED",
+      metadata: `Created new course: ${title}`
+    }
+  });
+
   // SMART NOTIFICATIONS: Notify all Learners of the new course
   try {
     const learners = await prisma.user.findMany({ where: { role: 'Learner' } });
@@ -205,15 +214,24 @@ router.post("/upload-content", upload, async (req, res) => {
         },
       });
 
-      // SMART NOTIFICATION: Notify Learners about the new video
+      // SMART NOTIFICATION: Notify Admins about the new video requiring review
       try {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
         if (course) {
-          const learners = await prisma.user.findMany({ where: { role: 'Learner' } });
-          if (learners.length > 0) {
-            const notifications = learners.map(learner => ({
-              userId: learner.id,
-              message: `New Content Alert: A new video "${title}" was just added to "${course.title}"!`
+          // Audit Log
+          await prisma.activityLog.create({
+            data: {
+              userId: course.creatorId,
+              action: "CONTENT_UPLOADED",
+              metadata: `Uploaded video: ${title} for course ${course.title}`
+            }
+          });
+
+          const admins = await prisma.user.findMany({ where: { role: 'Admin' } });
+          if (admins.length > 0) {
+            const notifications = admins.map(admin => ({
+              userId: admin.id,
+              message: `Review Required: A new video "${title}" was uploaded to "${course.title}" and is pending approval.`
             }));
             await prisma.notification.createMany({ data: notifications });
           }
@@ -237,15 +255,24 @@ router.post("/upload-content", upload, async (req, res) => {
         },
       });
 
-      // SMART NOTIFICATION: Notify Learners about the new document
+      // SMART NOTIFICATION: Notify Admins about the new document requiring review
       try {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
         if (course) {
-          const learners = await prisma.user.findMany({ where: { role: 'Learner' } });
-          if (learners.length > 0) {
-            const notifications = learners.map(learner => ({
-              userId: learner.id,
-              message: `New Study Material: A document "${title}" was just added to "${course.title}"!`
+          // Audit Log
+          await prisma.activityLog.create({
+            data: {
+              userId: course.creatorId,
+              action: "CONTENT_UPLOADED",
+              metadata: `Uploaded document: ${title} for course ${course.title}`
+            }
+          });
+
+          const admins = await prisma.user.findMany({ where: { role: 'Admin' } });
+          if (admins.length > 0) {
+            const notifications = admins.map(admin => ({
+              userId: admin.id,
+              message: `Review Required: A new document "${title}" was uploaded to "${course.title}" and is pending approval.`
             }));
             await prisma.notification.createMany({ data: notifications });
           }

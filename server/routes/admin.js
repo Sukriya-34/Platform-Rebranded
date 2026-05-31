@@ -52,12 +52,21 @@ router.put("/users/:userId/role", async (req, res) => {
     const userId = parseInt(req.params.userId);
     const { role } = req.body;
 
-    const updated = await prisma.user.update({
+    const resUser = await prisma.user.update({
       where: { id: userId },
       data: { role },
     });
+    
+    // Audit Log
+    await prisma.activityLog.create({
+      data: {
+        userId: userId,
+        action: "USER_ROLE_UPDATED",
+        metadata: `Role updated to ${role}`
+      }
+    });
 
-    res.json({ message: "User role updated successfully", user: updated });
+    res.json({ message: "User role updated successfully", user: resUser });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to update user role" });
@@ -68,6 +77,19 @@ router.put("/users/:userId/role", async (req, res) => {
 router.delete("/users/:userId", async (req, res) => {
   try {
     const userId = parseInt(req.params.userId);
+    
+    // Audit Log BEFORE deletion
+    const userToDel = await prisma.user.findUnique({ where: { id: userId } });
+    if (userToDel) {
+      await prisma.activityLog.create({
+        data: {
+          userId: userToDel.id,
+          action: "USER_DELETED",
+          metadata: `Admin deleted user ${userToDel.email}`
+        }
+      });
+    }
+
     await prisma.user.delete({ where: { id: userId } });
     res.json({ message: "User deleted successfully" });
   } catch (err) {
@@ -89,6 +111,23 @@ router.get("/flagged-courses", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch flagged courses" });
+  }
+});
+
+// GET ALL courses
+router.get("/courses", async (req, res) => {
+  try {
+    const courses = await prisma.course.findMany({
+      include: {
+        creator: { select: { fullName: true, email: true } },
+        enrollments: true,
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json(courses);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch courses" });
   }
 });
 
@@ -158,28 +197,63 @@ router.put("/content/:type/:id/status", async (req, res) => {
       await prisma.document.update({ where: { id }, data: { status } });
     }
     
-    // Notify creator
+    // Notify creator & Audit Log
     try {
       const asset = type === "video" 
         ? await prisma.video.findUnique({ where: { id }, include: { course: true } })
         : await prisma.document.findUnique({ where: { id }, include: { course: true } });
         
-      if (asset) {
-        await prisma.notification.create({
-          data: {
-            userId: asset.course.creatorId,
-            message: `Your uploaded ${type} "${asset.title}" has been ${status.toLowerCase()} by an admin.`
+        if (asset) {
+          // Audit Log
+          await prisma.activityLog.create({
+            data: {
+              userId: asset.course.creatorId,
+              action: "CONTENT_MODERATED",
+              metadata: `Admin ${status} ${type}: ${asset.title}`
+            }
+          });
+          // 1. Notify Creator
+          await prisma.notification.create({
+            data: {
+              userId: asset.course.creatorId,
+              message: `Your uploaded ${type} "${asset.title}" has been ${status.toLowerCase()} by an admin.`
+            }
+          });
+
+          // 2. Notify Learners if APPROVED
+          if (status === "APPROVED") {
+            const learners = await prisma.user.findMany({ where: { role: 'Learner' } });
+            if (learners.length > 0) {
+              const notifications = learners.map(learner => ({
+                userId: learner.id,
+                message: `New Study Material: A ${type} "${asset.title}" was just added to "${asset.course.title}"!`
+              }));
+              await prisma.notification.createMany({ data: notifications });
+            }
           }
-        });
+        }
+      } catch(err) {
+        console.error("Failed to notify creator/learners about status change", err);
       }
-    } catch(err) {
-      console.error("Failed to notify creator about status change", err);
-    }
 
     res.json({ message: `Content marked as ${status}` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to update content status" });
+  }
+});
+
+// GET audit logs
+router.get("/audit-logs", async (req, res) => {
+  try {
+    const logs = await prisma.activityLog.findMany({
+      include: { user: true },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json(logs);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch audit logs" });
   }
 });
 

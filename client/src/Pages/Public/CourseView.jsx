@@ -1,255 +1,263 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Play, ChevronLeft, FileText, Lock, ShieldAlert, BookOpen, Send, BrainCircuit, Award, MapPin, Mail, Phone, User } from "lucide-react";
+import { User, Play, Lock, BookOpen, Clock, FileText } from "lucide-react";
 
-const FacebookIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
-);
-const InstagramIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-);
+const getYouTubeEmbedUrl = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+
+  if (match && match[2].length === 11) {
+    return `https://www.youtube.com/embed/${match[2]}`;
+  }
+  return null;
+};
 
 export default function PublicCourseView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   
+  const [activeItem, setActiveItem] = useState(null);
+  const [itemType, setItemType] = useState('video'); // 'video', 'document', or 'quiz'
+
   useEffect(() => {
     const fetchCourse = async () => {
       try {
         const res = await fetch(`http://localhost:5000/api/courses/${id}`);
         if (!res.ok) throw new Error("Course not found");
         const data = await res.json();
-        
-        // Fetch creator details
-        if (data.creatorId) {
-           const profileRes = await fetch(`http://localhost:5000/api/profile/public/${data.creatorId}`);
-           if (profileRes.ok) {
-              const profileData = await profileRes.json();
-              data.creator = profileData.user;
-           }
-        }
-        
-        // Fetch quiz
-        const quizRes = await fetch(`http://localhost:5000/api/learner/quiz/${id}`);
-        if (quizRes.ok) {
-           data.quiz = await quizRes.json();
-        }
-        
         setCourse(data);
+        if (data.videos && Array.isArray(data.videos) && data.videos.length > 0) {
+          setActiveItem(data.videos[0]);
+          setItemType('video');
+        }
       } catch (err) {
+        console.error("Fetch error:", err);
         setCourse({ error: true });
       }
     };
     fetchCourse();
   }, [id]);
 
-  if (course?.error) return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center bg-white">
-      <h2 className="text-4xl font-playfair mb-4">Course not found.</h2>
-      <Link to="/courses" className="text-soft-periwinkle hover:underline">Return to Catalog</Link>
-    </div>
-  );
+  if (!course) {
+    return <div className="p-20 text-center font-poppins">Loading course details...</div>;
+  }
   
-  if (!course) return (
-    <div className="h-[70vh] flex items-center justify-center bg-white font-poppins text-lavender-grey animate-pulse">
-      Loading Course Data...
-    </div>
-  );
+  if (course.error) {
+    return (
+      <div className="p-20 text-center font-poppins">
+        <h2 className="text-2xl font-bold mb-4">Course Not Found</h2>
+        <Link to="/courses" className="text-blue-500 hover:underline">Back to Courses</Link>
+      </div>
+    );
+  }
+
+  // Determine if the current selected item is locked
+  // The first video is unlocked. Everything else is locked for public preview.
+  const isLocked = activeItem && !(itemType === 'video' && course.videos?.[0]?.id === activeItem.id);
 
   return (
-    <div className="font-poppins bg-white w-full">
-      {/* Hero Section */}
-      <div className="w-full bg-[#B3A9A7] py-20">
-        <div className="max-w-[1200px] mx-auto px-6 md:px-10">
-           <div className="bg-white p-8 md:p-12 rounded-lg flex flex-col md:flex-row gap-8 items-stretch shadow-md">
-              <div className="flex-1 flex flex-col justify-between">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold font-playfair text-ink-black mb-4">
-                    {course.title || "Course Title"}
-                  </h1>
-                  <p className="text-sm text-ink-black/80 leading-relaxed max-w-xl mb-8">
-                    {course.description || "A multidisciplinary field of study focusing on the design of computer technology and, in particular, the interaction between humans (the users) and computers. It encompasses understanding how humans use technology and how to create systems that are user-friendly, efficient, and enjoyable."}
+    <div className="font-poppins bg-porcelain min-h-screen">
+      {/* Immersive Player Header */}
+      <div className="w-full bg-ink-black py-10 border-b border-white/10 relative">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
+          
+          <div className="flex flex-col lg:flex-row gap-10">
+            {/* Main Player Area */}
+            <div className="flex-1 min-w-0">
+              <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/5 relative group">
+                
+                {/* LOCKED OVERLAY */}
+                {isLocked && (
+                  <div className="absolute inset-0 z-50 flex flex-col items-center justify-center text-white bg-ink-black/80 backdrop-blur-md p-8 text-center animate-fadeIn">
+                     <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center shadow-xl border border-white/10 mb-6 relative overflow-hidden">
+                       <Lock size={32} className="text-soft-periwinkle relative z-10" />
+                     </div>
+                     <h3 className="text-2xl md:text-3xl font-bold font-playfair mb-3 drop-shadow-md">
+                        Content Locked
+                     </h3>
+                     <p className="text-white/70 max-w-sm mx-auto mb-8 text-sm">
+                        You are previewing this course. Enroll now to unlock all videos, documents, quizzes, and track your progress!
+                     </p>
+                     <button 
+                       onClick={() => navigate('/login')}
+                       className="bg-soft-periwinkle hover:bg-white hover:text-ink-black text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg text-sm uppercase tracking-wider"
+                     >
+                        Enroll Now
+                     </button>
+                  </div>
+                )}
+
+                {!isLocked && activeItem ? (
+                  itemType === 'video' ? (
+                    getYouTubeEmbedUrl(activeItem.videoUrl) ? (
+                      <iframe
+                        key={getYouTubeEmbedUrl(activeItem.videoUrl)}
+                        className="absolute top-0 left-0 w-full h-full"
+                        src={getYouTubeEmbedUrl(activeItem.videoUrl)}
+                        title={activeItem.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    ) : (
+                        <video
+                          key={activeItem.videoUrl}
+                          controls
+                          className="w-full h-full object-contain"
+                        >
+                          <source src={activeItem.videoUrl} type="video/mp4" />
+                        </video>
+                    )
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-white/50">
+                      <FileText size={48} className="mb-4" />
+                      <p>Document Viewer (Locked)</p>
+                    </div>
+                  )
+                ) : !isLocked && (
+                  <div className="h-full flex flex-col items-center justify-center text-white/50">
+                    <Play size={48} className="mb-4 opacity-30" />
+                    <p>No preview available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Course Info Below Player */}
+              <div className="mt-8 text-white">
+                <span className="px-3 py-1 bg-soft-periwinkle/20 text-soft-periwinkle rounded-full text-xs font-bold uppercase tracking-wider mb-4 inline-block">
+                  {course.category}
+                </span>
+                <h1 className="text-3xl md:text-5xl font-bold font-playfair mb-4 drop-shadow-md">
+                  {course.title}
+                </h1>
+                <p className="text-sm text-white/70 leading-relaxed max-w-3xl mb-8">
+                  {course.description}
+                </p>
+                
+                <div className="flex items-center gap-4 pt-6 border-t border-white/10">
+                   <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center overflow-hidden border border-white/20">
+                      {course.creator?.profilePic ? (
+                         <img src={course.creator.profilePic} alt="Instructor" className="w-full h-full object-cover" />
+                      ) : (
+                         <User size={24} className="text-white/50" />
+                      )}
+                   </div>
+                   <div>
+                      <p className="text-xs text-white/50 font-bold uppercase tracking-wider">Instructor</p>
+                      <p className="text-sm font-semibold">{course.creator?.fullName || "Instructor Name"}</p>
+                   </div>
+                   <div className="ml-auto">
+                     <button 
+                       onClick={() => navigate('/login')}
+                       className="bg-white text-ink-black hover:bg-soft-periwinkle hover:text-white px-6 py-2.5 rounded-lg font-bold transition-colors text-sm uppercase tracking-wide"
+                     >
+                        Enroll: Rs. {course.price}
+                     </button>
+                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar Curriculum */}
+            <div className="w-full lg:w-[400px] shrink-0">
+              <div className="bg-white rounded-2xl shadow-xl border border-soft-linen overflow-hidden flex flex-col h-full max-h-[800px]">
+                <div className="p-6 border-b border-soft-linen bg-porcelain">
+                  <h3 className="font-bold text-lg font-playfair text-ink-black mb-1">Course Content</h3>
+                  <p className="text-xs text-lavender-grey font-medium">
+                    {course.videos?.length || 0} Videos • {course.documents?.length || 0} Documents
                   </p>
                 </div>
                 
-                <div className="flex items-end justify-between border-t border-gray-200 pt-6 mt-4">
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 overflow-hidden shrink-0">
-                        {course.creator?.profilePic ? (
-                           <img src={course.creator.profilePic} alt="Instructor" className="w-full h-full object-cover" />
-                        ) : (
-                           <User size={20} />
-                        )}
-                     </div>
-                     <div>
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Instructor</p>
-                        <p className="text-sm font-semibold text-ink-black">{course.creator?.fullName || "Instructor Name"}</p>
-                     </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+                  <div className="space-y-1">
+                    {/* Videos */}
+                    {course.videos?.length > 0 && course.videos.map((video, idx) => {
+                      const isActive = activeItem?.id === video.id && itemType === 'video';
+                      const isFreePreview = idx === 0;
+                      return (
+                        <button
+                          key={video.id}
+                          onClick={() => { setActiveItem(video); setItemType('video'); }}
+                          className={`w-full text-left p-4 rounded-xl flex items-start gap-4 transition-all group ${
+                            isActive ? "bg-soft-periwinkle/10 border-soft-periwinkle/30 border" : "hover:bg-porcelain border border-transparent"
+                          }`}
+                        >
+                          <div className={`mt-0.5 ${isActive ? "text-soft-periwinkle" : "text-lavender-grey group-hover:text-ink-black"}`}>
+                            {isFreePreview ? <Play size={18} /> : <Lock size={18} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`text-sm font-semibold truncate ${isActive ? "text-soft-periwinkle" : "text-ink-black"}`}>
+                              {video.title}
+                            </h4>
+                            <p className="text-xs text-lavender-grey mt-1 flex items-center gap-1">
+                              <Clock size={12} /> Video
+                              {isFreePreview && <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] rounded uppercase font-bold">Free Preview</span>}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {/* Documents */}
+                    {course.documents?.length > 0 && course.documents.map((doc) => {
+                      const isActive = activeItem?.id === doc.id && itemType === 'document';
+                      return (
+                        <button
+                          key={doc.id}
+                          onClick={() => { setActiveItem(doc); setItemType('document'); }}
+                          className={`w-full text-left p-4 rounded-xl flex items-start gap-4 transition-all group ${
+                            isActive ? "bg-soft-periwinkle/10 border-soft-periwinkle/30 border" : "hover:bg-porcelain border border-transparent"
+                          }`}
+                        >
+                          <div className={`mt-0.5 ${isActive ? "text-soft-periwinkle" : "text-lavender-grey group-hover:text-ink-black"}`}>
+                            <Lock size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`text-sm font-semibold truncate ${isActive ? "text-soft-periwinkle" : "text-ink-black"}`}>
+                              {doc.title}
+                            </h4>
+                            <p className="text-xs text-lavender-grey mt-1 flex items-center gap-1">
+                              <FileText size={12} /> Document
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    
+                    {/* Quizzes */}
+                    {course.quizzes?.length > 0 && course.quizzes.map((quiz) => {
+                      const isActive = activeItem?.id === quiz.id && itemType === 'quiz';
+                      return (
+                        <button
+                          key={quiz.id}
+                          onClick={() => { setActiveItem(quiz); setItemType('quiz'); }}
+                          className={`w-full text-left p-4 rounded-xl flex items-start gap-4 transition-all group ${
+                            isActive ? "bg-soft-periwinkle/10 border-soft-periwinkle/30 border" : "hover:bg-porcelain border border-transparent"
+                          }`}
+                        >
+                          <div className={`mt-0.5 ${isActive ? "text-soft-periwinkle" : "text-lavender-grey group-hover:text-ink-black"}`}>
+                            <Lock size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`text-sm font-semibold truncate ${isActive ? "text-soft-periwinkle" : "text-ink-black"}`}>
+                              {quiz.title}
+                            </h4>
+                            <p className="text-xs text-lavender-grey mt-1 flex items-center gap-1">
+                              <BookOpen size={12} /> Quiz
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
-              
-              <div className="w-full md:w-[350px] shrink-0 flex flex-col gap-4">
-                <div className="flex-1 bg-gray-300 rounded-lg min-h-[200px] relative overflow-hidden group flex items-center justify-center text-white">
-                  {course.thumbnailUrl ? (
-                    <img src={course.thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                  ) : (
-                    <Play size={48} className="opacity-50" />
-                  )}
-                </div>
-                <button 
-                  onClick={() => navigate('/login')}
-                  className="w-full bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 rounded-md transition-colors text-sm uppercase tracking-wide"
-                >
-                  Add to cart
-                </button>
-              </div>
-           </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-[1200px] mx-auto px-6 md:px-10 py-16">
-        <div className="max-w-4xl">
-          {/* About */}
-          <section className="mb-16">
-            <h2 className="text-2xl font-bold font-playfair text-ink-black mb-4">About this Programme</h2>
-            <p className="text-sm text-ink-black/80 leading-relaxed text-justify">
-              {course.about || "Human-Computer Interaction (HCI) is a multidisciplinary field that focuses on the design and use of computer technology, focusing particularly on the interfaces between people (users) and computers. Researchers in the field of HCI observe the ways in which humans interact with computers and design technologies that let humans interact with computers in novel ways. As a field of research, HCI is situated at the intersection of computer science, behavioral sciences, design, media studies, and several other fields of study."}
-            </p>
-          </section>
-
-          {/* Curriculum */}
-          <section className="mb-16">
-            <h2 className="text-2xl font-bold font-playfair text-ink-black mb-4">Programme curriculum</h2>
-            <p className="text-sm text-ink-black/80 leading-relaxed mb-8">
-              Understand the foundations of technology and human interaction. Walk through practical real-world applications of these principles.
-            </p>
-            
-            <div className="space-y-12">
-              {/* Fallback mock modules if course has no videos */}
-              {(course.videos && course.videos.length > 0) ? (
-                 course.videos.map((vid, idx) => (
-                    <div key={vid.id} className="flex flex-col md:flex-row gap-8">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold font-playfair text-ink-black mb-3">
-                          Module {idx + 1}: {vid.title}
-                        </h3>
-                        <p className="text-sm text-ink-black/70 leading-relaxed text-justify">
-                           Explore the core concepts of this module. This section delves into the foundational theories and practical applications necessary for mastering {vid.title.toLowerCase()}. You will gain hands-on insights into modern practices.
-                        </p>
-                      </div>
-                      <div className="w-full md:w-[280px] h-40 bg-gray-300 shrink-0 rounded-sm"></div>
-                    </div>
-                 ))
-              ) : (
-                <>
-                  <div className="flex flex-col md:flex-row gap-8">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold font-playfair text-ink-black mb-3">Module 1: Introduction to HCI</h3>
-                      <p className="text-sm text-ink-black/70 leading-relaxed text-justify">
-                        Explore the history, scope, and significance of HCI. Learn how HCI has evolved from early command-line interfaces to modern touch screens and virtual reality. Topics include user-centered design, usability, accessibility, and the human factors that influence interaction.
-                      </p>
-                    </div>
-                    <div className="w-full md:w-[280px] h-40 bg-gray-300 shrink-0 rounded-sm"></div>
-                  </div>
-                  <div className="flex flex-col md:flex-row gap-8">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold font-playfair text-ink-black mb-3">Module 2: Principle of Good Interface Design</h3>
-                      <p className="text-sm text-ink-black/70 leading-relaxed text-justify">
-                        Dive into the principles that guide effective interface design, including visibility, feedback, consistency, affordance, and error prevention. Learn how cognitive load, attention span, and human perception influence the way users interact with technology.
-                      </p>
-                    </div>
-                    <div className="w-full md:w-[280px] h-40 bg-gray-300 shrink-0 rounded-sm"></div>
-                  </div>
-                </>
-              )}
             </div>
-          </section>
-
-          {/* Test Your Knowledge */}
-          <section className="mb-16">
-            <h2 className="text-2xl font-bold font-playfair text-ink-black mb-6">Test your Knowledge</h2>
-            
-            <div className="space-y-6">
-               {course.quiz?.questions ? (
-                 course.quiz.questions.map((q, idx) => (
-                   <div key={q.id}>
-                     <p className="text-sm font-semibold text-ink-black mb-2">{idx + 1}. {q.questionText}</p>
-                     <ul className="text-sm text-ink-black/70 space-y-1 ml-4 list-disc">
-                       {q.options.map((opt, i) => <li key={i}>{opt}</li>)}
-                     </ul>
-                   </div>
-                 ))
-               ) : (
-                 <>
-                   <div>
-                     <p className="text-sm font-semibold text-ink-black mb-2">1. Original key focus area:</p>
-                     <ul className="text-sm text-ink-black/70 space-y-1 ml-4 list-disc">
-                       <li>Data systems</li>
-                       <li>Visual aesthetics</li>
-                     </ul>
-                   </div>
-                   <div>
-                     <p className="text-sm font-semibold text-ink-black mb-2">2. Visibility of system status means:</p>
-                     <ul className="text-sm text-ink-black/70 space-y-1 ml-4 list-disc">
-                       <li>White space usage</li>
-                       <li>Keeping users informed</li>
-                     </ul>
-                   </div>
-                 </>
-               )}
-            </div>
-            
-            <button 
-              onClick={() => navigate('/login')}
-              className="mt-8 bg-ink-black hover:bg-gray-800 text-white font-bold py-2 px-6 rounded-md transition-colors text-sm"
-            >
-              Submit
-            </button>
-          </section>
+          </div>
+          
         </div>
-      </div>
-
-      {/* Footer Contact Section */}
-      <div className="w-full bg-[#B3A9A7] py-16">
-        <div className="max-w-[1200px] mx-auto px-6 md:px-10 grid grid-cols-1 md:grid-cols-4 gap-8 text-ink-black">
-           <div>
-             <h3 className="font-bold text-sm mb-4">Platform</h3>
-             <ul className="text-xs space-y-2 opacity-80">
-               <li>Empowering learners globally with high-quality education and expert guidance.</li>
-             </ul>
-           </div>
-           <div>
-             <h3 className="font-bold text-sm mb-4">Quick Links</h3>
-             <ul className="text-xs space-y-2 opacity-80">
-               <li><Link to="/">Home</Link></li>
-               <li><Link to="/courses">Courses</Link></li>
-               <li><Link to="/about">About Us</Link></li>
-               <li><Link to="/blog">Blog</Link></li>
-             </ul>
-           </div>
-           <div>
-             <h3 className="font-bold text-sm mb-4">Contact Details</h3>
-             <ul className="text-xs space-y-2 opacity-80">
-               <li>Email: support@platformx.com</li>
-               <li>Phone: +1 234 567 890</li>
-               <li>Address: 123 Learning Street, NY</li>
-             </ul>
-           </div>
-           <div>
-             <h3 className="font-bold text-sm mb-4">Any Enquiry?</h3>
-             <form className="space-y-2">
-               <input type="text" placeholder="Your Name" className="w-full bg-white/50 border border-ink-black/20 rounded px-3 py-2 text-xs focus:outline-none" />
-               <input type="text" placeholder="Your Message" className="w-full bg-white/50 border border-ink-black/20 rounded px-3 py-2 text-xs focus:outline-none" />
-               <button type="button" className="w-full bg-ink-black text-white text-xs font-bold py-2 rounded hover:bg-gray-800">Submit</button>
-             </form>
-           </div>
-        </div>
-      </div>
-      <div className="w-full bg-[#B3A9A7] py-4 border-t border-ink-black/10 text-center">
-         <span className="text-[10px] font-bold text-ink-black">All Rights Reserved 2024 © Platform website</span>
       </div>
     </div>
   );

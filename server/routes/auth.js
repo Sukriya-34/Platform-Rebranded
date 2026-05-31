@@ -97,8 +97,16 @@ router.post("/register", async (req, res) => {
         otpExpiry: otpExpiry,
       },
     });
-
     console.log(`Success: Registered ${prismaRole} - ${email}`);
+
+    // Audit Log
+    await prisma.activityLog.create({
+      data: {
+        userId: newUser.id,
+        action: "USER_REGISTERED",
+        metadata: `New ${prismaRole} account created for ${email}`
+      }
+    });
 
     const mailOptions = {
       from: process.env.EMAIL_USER,

@@ -53,7 +53,7 @@ const Login = () => {
 
       // 3. Precise Routing
       if (normalizedRole === "admin") {
-        navigate("/admin-dashboard");
+        navigate("/admin/dashboard");
       } else if (
         normalizedRole === "contentcreator" ||
         normalizedRole === "creator"
@@ -62,7 +62,7 @@ const Login = () => {
         navigate("/creator/dashboard");
       } else {
         // Default for "learner" or any other role
-        navigate("/learner-dashboard");
+        navigate("/learner/dashboard");
       }
     } catch (err) {
       setFieldErrors({ password: err.message });

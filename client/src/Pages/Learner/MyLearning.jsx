@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext, useLocation } from "react-router-dom";
 import { Card } from "../../components/DisplayComponents";
 import { Play, Clock, BookOpen, User, Bookmark, Search, Compass, Award, BrainCircuit, FileText, Calendar } from "lucide-react";
 
 export default function MyLearning() {
-  const [activeTab, setActiveTab] = useState("enrolled"); // "enrolled", "saved", or "history"
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialTab = searchParams.get('tab') || "enrolled";
+
+  const [activeTab, setActiveTab] = useState(initialTab); // "enrolled", "saved", or "history"
   const [enrolled, setEnrolled] = useState([]);
   const [saved, setSaved] = useState([]);
   const [history, setHistory] = useState([]);
   
   const navigate = useNavigate();
   const { searchQuery } = useOutletContext() || { searchQuery: "" };
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    if (tab && ['enrolled', 'saved', 'history'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   const loadData = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -79,23 +91,23 @@ export default function MyLearning() {
         </div>
         
         {/* Tab Navigation Menu */}
-        <div className="flex items-center bg-porcelain p-1 rounded-xl shadow-sm self-center md:self-end">
-           <button 
-             onClick={() => setActiveTab('enrolled')}
+          <div className="flex bg-porcelain p-1.5 rounded-xl border border-soft-linen shadow-inner w-full max-w-[500px]">
+             <button 
+             onClick={() => { setActiveTab('enrolled'); navigate('/learner/my-courses?tab=enrolled'); }}
              className={`px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'enrolled' ? 'bg-white text-ink-black shadow-md font-semibold' : 'text-lavender-grey hover:bg-white/50'}`}
-           >
+             >
              <Play size={15} /> In Progress
-           </button>
-           <button 
-             onClick={() => setActiveTab('saved')}
+             </button>
+             <button 
+             onClick={() => { setActiveTab('saved'); navigate('/learner/my-courses?tab=saved'); }}
              className={`px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'saved' ? 'bg-white text-ink-black shadow-md font-semibold' : 'text-lavender-grey hover:bg-white/50'}`}
-           >
+             >
              <Bookmark size={15} /> Saved Resources
-           </button>
-           <button 
-             onClick={() => setActiveTab('history')}
+             </button>
+             <button 
+             onClick={() => { setActiveTab('history'); navigate('/learner/my-courses?tab=history'); }}
              className={`px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${activeTab === 'history' ? 'bg-white text-ink-black shadow-md font-semibold' : 'text-lavender-grey hover:bg-white/50'}`}
-           >
+             >
              <Calendar size={15} /> Learning History
            </button>
         </div>

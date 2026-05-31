@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Bell, LogOut, User } from "lucide-react";
+import { Search, Bell, LogOut, User, MessageSquare } from "lucide-react";
 
 export default function CreatorLayout() {
   const location = useLocation();
@@ -11,6 +11,31 @@ export default function CreatorLayout() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifMenu, setShowNotifMenu] = useState(false);
+
+  const fetchNotifications = async (uid) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/notifications/${uid}`);
+      if (res.ok) setNotifications(await res.json());
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  const handleMarkNotificationsRead = async () => {
+    if (!user) return;
+    try {
+      await fetch(`http://localhost:5000/api/notifications/${user.id}/read`, {
+        method: "PUT"
+      });
+      fetchNotifications(user.id);
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     if (e.key === 'Enter' || e.type === 'click') {
@@ -23,11 +48,15 @@ export default function CreatorLayout() {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        fetchNotifications(parsed.id);
+        const interval = setInterval(() => fetchNotifications(parsed.id), 10000);
+        return () => clearInterval(interval);
       } catch (e) {
         console.error("Failed to parse user from local storage");
       }
@@ -57,6 +86,7 @@ export default function CreatorLayout() {
               { name: "Upload Content", to: "/creator/upload" },
               { name: "Manage Content", to: "/creator/manage" },
               { name: "Manage Quizzes", to: "/creator/quizzes" },
+              { name: "Messages", to: "/creator/chat" },
             ].map((item) => (
               <Link
                 key={item.to}
@@ -126,41 +156,40 @@ export default function CreatorLayout() {
               />
             </div>
 
-            <button className="relative p-2 text-lavender-grey hover:text-soft-periwinkle transition-colors">
-              <Bell size={24} />
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-            </button>
             <div className="relative">
               <button 
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="w-10 h-10 bg-soft-periwinkle rounded-full flex items-center justify-center text-white font-bold shadow-md cursor-pointer hover:bg-soft-periwinkle/90 transition-colors"
+                onClick={() => {
+                  setShowNotifMenu(!showNotifMenu);
+                  if (!showNotifMenu) handleMarkNotificationsRead();
+                }}
+                className="relative p-2 text-lavender-grey hover:text-soft-periwinkle transition-colors bg-porcelain rounded-full"
               >
-                {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "C"}
+                <Bell size={20} />
+                {notifications.some(n => !n.isRead) && (
+                  <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
               </button>
-              
-              {showProfileMenu && (
-                <div className="absolute right-0 mt-3 w-48 bg-white border border-soft-linen rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
-                  <div className="px-4 py-2 border-b border-soft-linen mb-2">
-                     <p className="text-sm font-bold text-ink-black truncate">{user?.fullName || "Content Creator"}</p>
-                     <p className="text-[10px] uppercase font-bold text-warm-taupe truncate">{user?.role || "Creator"}</p>
+
+              {showNotifMenu && (
+                <div className="absolute right-0 mt-3 w-80 bg-white border border-soft-linen rounded-2xl shadow-xl py-4 z-50 animate-fadeIn text-sm">
+                  <div className="px-4 pb-2 border-b border-soft-linen mb-2 flex items-center justify-between">
+                    <span className="text-xs font-bold text-ink-black uppercase tracking-wider">Notifications</span>
+                    {notifications.some(n => !n.isRead) && <span className="w-2 h-2 bg-red-500 rounded-full"></span>}
                   </div>
-                  <Link 
-                    to="/creator/profile"
-                    onClick={() => setShowProfileMenu(false)}
-                    className="w-full text-left px-4 py-2 text-sm text-ink-black hover:bg-porcelain flex items-center gap-2 transition-colors font-medium mb-1"
-                  >
-                    <User size={16} /> Profile Settings
-                  </Link>
-                  <button 
-                    onClick={() => {
-                      localStorage.removeItem("token");
-                      localStorage.removeItem("user");
-                      navigate("/login");
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2 transition-colors font-medium rounded-b-2xl"
-                  >
-                    <LogOut size={16} /> Logout
-                  </button>
+                  <div className="max-h-60 overflow-y-auto divide-y divide-soft-linen/50 custom-scrollbar">
+                    {notifications.length === 0 ? (
+                      <p className="text-xs text-lavender-grey text-center py-6">No notifications yet.</p>
+                    ) : (
+                      notifications.map(n => (
+                        <div key={n.id} className="p-3 text-xs text-ink-black hover:bg-porcelain/30 transition-colors">
+                          <p className={n.isRead ? "text-lavender-grey" : "font-semibold"}>{n.message}</p>
+                          <span className="text-[8px] text-lavender-grey uppercase font-bold mt-1.5 block">
+                            {new Date(n.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
             </div>

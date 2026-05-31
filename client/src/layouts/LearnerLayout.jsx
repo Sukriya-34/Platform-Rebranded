@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Bell, BookOpen, LayoutDashboard, User, LogOut, MessageSquare, Shield, Settings } from "lucide-react";
+import { Outlet, Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Search, Bell, BookOpen, LayoutDashboard, User, LogOut, MessageSquare, Shield, Settings, History } from "lucide-react";
 
 export default function LearnerLayout() {
   const location = useLocation();
@@ -99,7 +99,7 @@ export default function LearnerLayout() {
               </Link>
             ))}
             <NavLink
-              to="/learner/history"
+              to="/learner/my-courses?tab=history"
               className={({ isActive }) => `flex items-center gap-3 px-6 py-4 rounded-2xl transition-all duration-200 text-lg font-semibold tracking-wide ${isActive ? "bg-soft-periwinkle text-white shadow-lg shadow-soft-periwinkle/20" : "text-warm-taupe hover:bg-lavender-grey/20 hover:text-white"}`}
             >
               <History size={20} />
@@ -129,7 +129,7 @@ export default function LearnerLayout() {
                 {user?.fullName || "Student User"}
               </p>
               <p className="text-xs text-warm-taupe truncate">
-                {user?.role || "Learner"}
+                Learner
               </p>
             </div>
           </div>

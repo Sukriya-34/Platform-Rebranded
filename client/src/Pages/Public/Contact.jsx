@@ -15,25 +15,49 @@ export default function Contact() {
     subject: "",
     message: ""
   });
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState({ type: "", message: "" });
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({ name: "", email: "", subject: "", message: "" });
-    }, 3000);
+    setLoading(true);
+    setStatus({ type: "", message: "" });
+
+    try {
+      const res = await fetch("http://localhost:5000/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setStatus({ type: "success", message: "Message sent successfully!" });
+        setFormData({ name: "", email: "", subject: "", message: "" });
+      } else {
+        setStatus({ type: "error", message: data.error || "Failed to send message." });
+      }
+    } catch (error) {
+      setStatus({ type: "error", message: "An error occurred. Please try again." });
+    } finally {
+      setLoading(false);
+      setTimeout(() => setStatus({ type: "", message: "" }), 5000);
+    }
   };
 
   return (
     <div className="font-poppins bg-white w-full">
       {/* Banner */}
-      <div className="w-full bg-[#B3A9A7] py-24 flex items-center justify-center">
-        <div className="bg-black/20 backdrop-blur-sm rounded-xl p-8 max-w-2xl text-center text-white border border-white/10">
-          <h1 className="text-3xl font-bold font-playfair mb-3">Got Any Questions</h1>
-          <p className="text-sm opacity-90 leading-relaxed">
-            We're here to help you on your learning journey! Whether it's about a course, technical help, or general info -- don't hesitate to reach out.
+      <div 
+        className="w-full py-32 flex items-center justify-center relative overflow-hidden bg-cover bg-center"
+        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=2070&auto=format&fit=crop')" }}
+      >
+        <div className="absolute inset-0 bg-ink-black/60 backdrop-blur-[2px]"></div>
+        <div className="relative z-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-10 max-w-2xl text-center text-white shadow-2xl">
+          <h1 className="text-4xl md:text-5xl font-bold font-playfair mb-4 drop-shadow-md">Got Any Questions?</h1>
+          <p className="text-base opacity-90 leading-relaxed max-w-lg mx-auto">
+            We're here to help you on your learning journey! Whether it's about a course, technical help, or general info — don't hesitate to reach out.
           </p>
         </div>
       </div>
@@ -46,12 +70,13 @@ export default function Contact() {
             <h2 className="text-3xl font-playfair font-bold text-ink-black mb-2">Get in Touch</h2>
             <p className="text-sm text-ink-black mb-8">Let us know how to get back to you</p>
             
-            {submitted ? (
-              <div className="bg-green-50 text-green-700 p-6 rounded-xl border border-green-200 flex items-center justify-center h-64 font-bold">
-                Message sent successfully!
+            {status.message && (
+              <div className={`p-4 rounded-xl border font-bold mb-6 text-sm ${status.type === "success" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                {status.message}
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
+            )}
+            
+            <form onSubmit={handleSubmit} className="space-y-5">
                 <input 
                   type="text" 
                   placeholder="Name" 
@@ -86,12 +111,12 @@ export default function Contact() {
                 ></textarea>
                 <button 
                   type="submit" 
-                  className="w-full bg-[#B3A9A7] hover:bg-[#9c9391] text-white font-bold py-4 rounded-md transition-colors uppercase tracking-widest text-sm"
+                  disabled={loading}
+                  className="w-full bg-soft-periwinkle hover:bg-[#797A9E] text-white font-bold py-4 rounded-xl transition-all shadow-md hover:shadow-lg uppercase tracking-widest text-sm disabled:opacity-50"
                 >
-                  Button
+                  {loading ? "Sending..." : "Send Message"}
                 </button>
               </form>
-            )}
           </div>
 
           {/* Right Info */}

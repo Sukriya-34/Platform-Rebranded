@@ -14,6 +14,7 @@ import adminRoutes from "./routes/admin.js";
 import chatRoutes from "./routes/chat.js";
 import notificationRoutes from "./routes/notification.js";
 import paymentRoutes from "./routes/payment.js";
+import contactRoutes from "./routes/contact.js";
 
 dotenv.config();
 const app = express();
@@ -44,6 +45,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/contact", contactRoutes);
 
 const PORT = process.env.PORT || 5000;
 

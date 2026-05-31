@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, CheckCircle, BrainCircuit, UploadCloud } from "lucide-react";
+import { Plus, Trash2, CheckCircle, BrainCircuit, UploadCloud, Edit3 } from "lucide-react";
 import { Button, Textarea } from "../../components/SharedForms";
 import { Toast, Modal } from "../../components/DisplayComponents";
 
@@ -11,6 +11,7 @@ export default function ManageQuiz() {
   // Quiz building engine
   const [isBuilding, setIsBuilding] = useState(false);
   const [questions, setQuestions] = useState([]);
+  const [editingQuizId, setEditingQuizId] = useState(null);
   
   // Bulk Upload State
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -51,8 +52,16 @@ export default function ManageQuiz() {
   const startQuizBuilder = () => {
     if (!selectedCourseId) return showToast("Select a course first.");
     const existing = quizzes.find(q => q.courseId === selectedCourseId);
-    if (existing) return showToast("This course already has a quiz. Delete it first to recreate.");
+    if (existing) return showToast("This course already has a quiz. Click the Edit button below to modify it.");
     setQuestions([{ questionText: "", options: ["", "", "", ""], correctAnswer: 0, hint: "" }]);
+    setEditingQuizId(null);
+    setIsBuilding(true);
+  };
+
+  const editQuiz = (quiz) => {
+    setQuestions(quiz.questions);
+    setSelectedCourseId(quiz.courseId);
+    setEditingQuizId(quiz.id);
     setIsBuilding(true);
   };
 
@@ -139,15 +148,22 @@ export default function ManageQuiz() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5000/api/quiz", {
-        method: "POST",
+      const url = editingQuizId 
+        ? `http://localhost:5000/api/quiz/${editingQuizId}` 
+        : "http://localhost:5000/api/quiz";
+      
+      const method = editingQuizId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ courseId: selectedCourseId, questions })
       });
       if (res.ok) {
         setIsBuilding(false);
+        setEditingQuizId(null);
         fetchCoursesAndQuizzes();
-        showToast("Quiz published successfully!", "success");
+        showToast(`Quiz ${editingQuizId ? "updated" : "published"} successfully!`, "success");
       } else {
         const err = await res.json();
         showToast(err.message || "Failed to publish quiz.");
@@ -217,9 +233,14 @@ export default function ManageQuiz() {
                            <p className="font-bold text-ink-black">{q.courseTitle}</p>
                            <p className="text-xs text-lavender-grey">{q.questions.length} Questions</p>
                         </div>
-                        <button onClick={() => deleteQuiz(q.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
-                          <Trash2 size={18} />
-                        </button>
+                        <div className="flex gap-2">
+                           <button onClick={() => editQuiz(q)} className="p-2 text-lavender-grey hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-colors" title="Edit Quiz">
+                             <Edit3 size={18} />
+                           </button>
+                           <button onClick={() => deleteQuiz(q.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors" title="Delete Quiz">
+                             <Trash2 size={18} />
+                           </button>
+                        </div>
                      </div>
                    ))}
                 </div>
@@ -230,10 +251,10 @@ export default function ManageQuiz() {
         <div className="bg-white p-8 rounded-3xl border border-soft-linen shadow-sm space-y-8">
            <div className="flex justify-between items-center border-b border-soft-linen pb-4">
               <div className="flex items-center gap-4">
-                 <h2 className="text-xl font-bold text-ink-black">Quiz Builder</h2>
+                 <h2 className="text-xl font-bold text-ink-black">{editingQuizId ? "Edit Quiz" : "Quiz Builder"}</h2>
                  <button onClick={() => setShowBulkModal(true)} className="text-xs font-bold bg-porcelain px-3 py-1.5 rounded-lg text-ink-black hover:bg-soft-periwinkle/10 hover:text-soft-periwinkle transition-colors flex items-center gap-1"><UploadCloud size={14}/> Bulk Upload</button>
               </div>
-              <button className="text-lavender-grey hover:text-ink-black text-sm font-bold" onClick={() => setIsBuilding(false)}>Cancel</button>
+              <button className="text-lavender-grey hover:text-ink-black text-sm font-bold" onClick={() => { setIsBuilding(false); setEditingQuizId(null); }}>Cancel</button>
            </div>
            
            <div className="space-y-6">

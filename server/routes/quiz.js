@@ -84,6 +84,41 @@ router.post("/", async (req, res) => {
   }
 });
 
+// PUT (Update) an existing quiz
+router.put("/:id", async (req, res) => {
+  const { questions } = req.body;
+  if (!questions || !questions.length) {
+    return res.status(400).json({ message: "At least 1 question required." });
+  }
+
+  try {
+    // 1. Delete all existing questions for this quiz
+    await prisma.question.deleteMany({
+      where: { quizId: req.params.id },
+    });
+
+    // 2. Add the new/updated questions
+    const updatedQuiz = await prisma.quiz.update({
+      where: { id: req.params.id },
+      data: {
+        questions: {
+          create: questions.map((q) => ({
+            questionText: q.questionText,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            hint: q.hint,
+          })),
+        },
+      },
+      include: { questions: true },
+    });
+    res.json(updatedQuiz);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update quiz." });
+  }
+});
+
 // DELETE a quiz
 router.delete("/:id", async (req, res) => {
   try {

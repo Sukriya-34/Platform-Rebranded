@@ -1,18 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, BookOpen, Flag, Shield, Trash2, Check, ArrowLeft, RefreshCw } from "lucide-react";
+import { Users, BookOpen, Flag, Shield, Trash2, Check, ArrowLeft, RefreshCw, Eye, X, Activity } from "lucide-react";
 import { Card } from "../../components/DisplayComponents";
 import { Button } from "../../components/SharedForms";
+
+const getYouTubeEmbedUrl = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length === 11) return `https://www.youtube.com/embed/${match[2]}`;
+  return null;
+};
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ usersCount: 0, coursesCount: 0, flaggedCount: 0, enrollmentsCount: 0 });
   const [users, setUsers] = useState([]);
+  const [allCourses, setAllCourses] = useState([]);
   const [flaggedCourses, setFlaggedCourses] = useState([]);
   const [pendingContent, setPendingContent] = useState([]);
-  const [activeTab, setActiveTab] = useState("users"); // 'users', 'moderation', 'approvals'
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [activeTab, setActiveTab] = useState("users"); // 'users', 'moderation', 'approvals', 'audit'
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState("");
+  const [previewItem, setPreviewItem] = useState(null); // Modal state for preview
+  const [selectedAuditUser, setSelectedAuditUser] = useState(""); // State for filtering audit logs by user
 
   const checkAdminAuth = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -25,17 +37,21 @@ export default function AdminDashboard() {
   const loadAdminData = async () => {
     setLoading(true);
     try {
-      const [statsRes, usersRes, flaggedRes, pendingRes] = await Promise.all([
+      const [statsRes, usersRes, flaggedRes, pendingRes, auditRes, coursesRes] = await Promise.all([
         fetch("http://localhost:5000/api/admin/stats"),
         fetch("http://localhost:5000/api/admin/users"),
         fetch("http://localhost:5000/api/admin/flagged-courses"),
-        fetch("http://localhost:5000/api/admin/pending-content")
+        fetch("http://localhost:5000/api/admin/pending-content"),
+        fetch("http://localhost:5000/api/admin/audit-logs"),
+        fetch("http://localhost:5000/api/admin/courses")
       ]);
 
       if (statsRes.ok) setStats(await statsRes.json());
       if (usersRes.ok) setUsers(await usersRes.json());
       if (flaggedRes.ok) setFlaggedCourses(await flaggedRes.json());
       if (pendingRes.ok) setPendingContent(await pendingRes.json());
+      if (auditRes.ok) setAuditLogs(await auditRes.json());
+      if (coursesRes.ok) setAllCourses(await coursesRes.json());
     } catch (err) {
       console.error("Admin data fetch error:", err);
     } finally {
@@ -168,33 +184,40 @@ export default function AdminDashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        <Card className="flex items-center gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
+        <Card className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab("users")}>
           <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl"><Users size={28} /></div>
           <div>
             <p className="text-sm font-bold text-lavender-grey uppercase tracking-wider">Total Users</p>
             <h3 className="text-3xl font-extrabold">{stats.usersCount}</h3>
           </div>
         </Card>
-        <Card className="flex items-center gap-5">
+        <Card className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab("courses")}>
           <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl"><BookOpen size={28} /></div>
           <div>
             <p className="text-sm font-bold text-lavender-grey uppercase tracking-wider">Total Courses</p>
             <h3 className="text-3xl font-extrabold">{stats.coursesCount}</h3>
           </div>
         </Card>
-        <Card className="flex items-center gap-5">
+        <Card className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab("moderation")}>
           <div className="p-4 bg-red-50 text-red-600 rounded-2xl"><Flag size={28} /></div>
           <div>
             <p className="text-sm font-bold text-lavender-grey uppercase tracking-wider">Flagged Courses</p>
             <h3 className="text-3xl font-extrabold">{stats.flaggedCount}</h3>
           </div>
         </Card>
-        <Card className="flex items-center gap-5">
+        <Card className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab("approvals")}>
           <div className="p-4 bg-green-50 text-green-600 rounded-2xl"><Shield size={28} /></div>
           <div>
-            <p className="text-sm font-bold text-lavender-grey uppercase tracking-wider">Enrollments</p>
-            <h3 className="text-3xl font-extrabold">{stats.enrollmentsCount}</h3>
+            <p className="text-sm font-bold text-lavender-grey uppercase tracking-wider">Pending Approvals</p>
+            <h3 className="text-3xl font-extrabold">{pendingContent.length}</h3>
+          </div>
+        </Card>
+        <Card className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all" onClick={() => setActiveTab("audit")}>
+          <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl"><Activity size={28} /></div>
+          <div>
+            <p className="text-sm font-bold text-lavender-grey uppercase tracking-wider">Audit Logs</p>
+            <h3 className="text-3xl font-extrabold">{auditLogs.length}</h3>
           </div>
         </Card>
       </div>
@@ -210,6 +233,16 @@ export default function AdminDashboard() {
           }`}
         >
           User Accounts Management ({users.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("courses")}
+          className={`py-4 px-6 font-bold text-sm border-b-2 transition-all ${
+            activeTab === "courses"
+              ? "border-soft-periwinkle text-soft-periwinkle"
+              : "border-transparent text-lavender-grey hover:text-ink-black"
+          }`}
+        >
+          All Courses ({allCourses.length})
         </button>
         <button
           onClick={() => setActiveTab("moderation")}
@@ -230,6 +263,16 @@ export default function AdminDashboard() {
           }`}
         >
           Content Approvals ({pendingContent.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("audit")}
+          className={`py-4 px-6 font-bold text-sm border-b-2 transition-all ${
+            activeTab === "audit"
+              ? "border-soft-periwinkle text-soft-periwinkle"
+              : "border-transparent text-lavender-grey hover:text-ink-black"
+          }`}
+        >
+          System Audit Logs ({auditLogs.length})
         </button>
       </div>
 
@@ -279,6 +322,54 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : activeTab === "courses" ? (
+        <Card className="overflow-hidden border border-soft-linen p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-porcelain border-b border-soft-linen">
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">Course Title</th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">Category</th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">Creator</th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">Enrollments</th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">Status</th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-soft-linen bg-white">
+                {allCourses.length === 0 ? (
+                  <tr><td colSpan="6" className="text-center py-10 text-lavender-grey">No courses on the platform yet.</td></tr>
+                ) : (
+                  allCourses.map((c) => (
+                    <tr key={c.id} className="hover:bg-porcelain/30 transition-colors">
+                      <td className="py-4 px-6 font-bold text-sm">{c.title}</td>
+                      <td className="py-4 px-6 text-sm text-lavender-grey">{c.category}</td>
+                      <td className="py-4 px-6 text-sm">
+                        {c.creator?.fullName}
+                        <span className="block text-[10px] text-lavender-grey">{c.creator?.email}</span>
+                      </td>
+                      <td className="py-4 px-6 text-sm font-bold">{c.enrollments?.length || 0}</td>
+                      <td className="py-4 px-6">
+                        <span className={`text-[10px] font-bold uppercase px-3 py-1 rounded-full ${c.isFlagged ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                          {c.isFlagged ? "Flagged" : "Active"}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => handleDeleteCourse(c.id)}
+                          className="p-2 text-lavender-grey hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                          title="Delete Course"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -359,10 +450,16 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex gap-4 mt-6 pt-4 border-t border-soft-linen">
                     <button
+                      onClick={() => setPreviewItem(asset)}
+                      className="flex-1 py-2 px-4 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Eye size={14} /> Preview
+                    </button>
+                    <button
                       onClick={() => handleUpdateContentStatus(asset.type, asset.id, "APPROVED")}
                       className="flex-1 py-2 px-4 rounded-xl text-xs font-bold bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 transition-all flex items-center justify-center gap-1.5"
                     >
-                      <Check size={14} /> Approve Content
+                      <Check size={14} /> Approve
                     </button>
                     <button
                       onClick={() => {
@@ -379,7 +476,117 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+      ) : activeTab === "audit" ? (
+        <Card className="overflow-hidden border border-soft-linen p-0">
+          {/* Filter Bar */}
+          <div className="p-4 border-b border-soft-linen bg-porcelain flex justify-between items-center">
+            <h3 className="font-bold text-ink-black">System Activity History</h3>
+            <select
+              value={selectedAuditUser}
+              onChange={(e) => setSelectedAuditUser(e.target.value)}
+              className="bg-white border border-soft-linen rounded-xl px-4 py-2 text-sm font-bold text-ink-black focus:outline-none focus:ring-1 focus:ring-soft-periwinkle min-w-[200px]"
+            >
+              <option value="">All Users</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>{u.fullName} ({u.role})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-porcelain border-b border-soft-linen">
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">Timestamp</th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">User</th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">Action</th>
+                  <th className="py-4 px-6 text-xs font-bold uppercase text-lavender-grey tracking-wider">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-soft-linen bg-white">
+                {auditLogs.filter(log => selectedAuditUser === "" || log.userId === parseInt(selectedAuditUser)).length === 0 ? (
+                  <tr><td colSpan="4" className="text-center py-10 text-lavender-grey">No activity logs found for this filter.</td></tr>
+                ) : (
+                  auditLogs
+                    .filter(log => selectedAuditUser === "" || log.userId === parseInt(selectedAuditUser))
+                    .map((log) => (
+                    <tr key={log.id} className="hover:bg-porcelain/30 transition-colors">
+                      <td className="py-4 px-6 text-sm text-lavender-grey whitespace-nowrap">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                      <td className="py-4 px-6 font-bold text-sm text-ink-black">
+                        {log.user?.fullName} <span className="text-xs text-lavender-grey block">{log.user?.email}</span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="text-[10px] font-bold uppercase px-3 py-1 rounded-full bg-indigo-100 text-indigo-700">
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-sm text-lavender-grey max-w-md">
+                        {log.metadata}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       ) : null}
+      {/* Preview Modal */}
+      {previewItem && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-ink-black/80 backdrop-blur-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-full max-h-[90vh]">
+            <div className="p-4 border-b border-soft-linen flex items-center justify-between bg-porcelain">
+              <div>
+                <h3 className="font-bold font-playfair text-xl">{previewItem.title}</h3>
+                <p className="text-xs text-lavender-grey font-medium uppercase tracking-wider">{previewItem.type} Preview</p>
+              </div>
+              <button onClick={() => setPreviewItem(null)} className="p-2 bg-white rounded-full text-lavender-grey hover:text-ink-black shadow-sm transition-colors border border-soft-linen">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-hidden bg-black relative">
+              {previewItem.type === "video" ? (
+                getYouTubeEmbedUrl(previewItem.videoUrl) ? (
+                  <iframe
+                    className="w-full h-full"
+                    src={getYouTubeEmbedUrl(previewItem.videoUrl)}
+                    title={previewItem.title}
+                    frameBorder="0"
+                    allowFullScreen
+                  ></iframe>
+                ) : (
+                  <video controls className="w-full h-full object-contain">
+                    <source src={`http://localhost:5000/${previewItem.videoUrl?.replace(/\\/g, "/")}`} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                )
+              ) : (
+                <iframe
+                  className="w-full h-full bg-white"
+                  src={`http://localhost:5000/${previewItem.docUrl?.replace(/\\/g, "/")}`}
+                  title={previewItem.title}
+                ></iframe>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-soft-linen bg-white flex justify-end gap-4">
+               <button
+                  onClick={() => {
+                     handleUpdateContentStatus(previewItem.type, previewItem.id, "APPROVED");
+                     setPreviewItem(null);
+                  }}
+                  className="py-2.5 px-6 rounded-xl text-sm font-bold bg-green-500 hover:bg-green-600 text-white shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  <Check size={16} /> Approve Content
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

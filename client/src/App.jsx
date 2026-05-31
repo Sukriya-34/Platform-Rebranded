@@ -13,6 +13,7 @@ import ForgotPassword from "./Pages/Auth/ForgotPassword";
 import RoleSelection from "./Pages/Auth/RoleSelection";
 import VerifyOTP from "./Pages/Auth/VerifyOTP";
 import ResetPassword from "./Pages/Auth/ResetPassword";
+import AdminLogin from "./Pages/Admin/Login";
 
 // Creator Pages
 import Dashboard from "./Pages/Creator/Dashboard";
@@ -22,6 +23,7 @@ import ManageContent from "./Pages/Creator/ManageContent";
 import ManageQuiz from "./Pages/Creator/ManageQuiz";
 import CourseView from "./Pages/Creator/CourseView";
 import CreatorProfileSettings from "./Pages/Creator/ProfileSettings";
+import CreatorChat from "./Pages/Creator/Chat";
 import AdminDashboard from "./Pages/Admin/Dashboard";
 import Profile from "./Pages/Learner/Profile";
 import ContributorProfile from "./Pages/Public/ContributorProfile";
@@ -37,7 +39,6 @@ import Home from "./Pages/Home";
 import PublicCourses from "./Pages/Public/Courses";
 import PublicCourseView from "./Pages/Public/CourseView";
 import About from "./Pages/Public/About";
-import Blog from "./Pages/Public/Blog";
 import Contact from "./Pages/Public/Contact";
 
 export default function App() {
@@ -60,8 +61,7 @@ export default function App() {
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
             <Route path="about" element={<About />} />
-            <Route path="blog" element={<Blog />} />
-            <Route path="contact-us" element={<Contact />} />
+            <Route path="contact" element={<Contact />} />
             <Route path="courses" element={<PublicCourses />} />
             <Route path="courses/:id" element={<PublicCourseView />} />
             <Route path="contributor/:creatorId" element={<ContributorProfile />} />
@@ -72,8 +72,11 @@ export default function App() {
           <Route path="/role-selection" element={<RoleSelection />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+
+          {/* Public Routes */}
           <Route path="/quiz/:id" element={<QuizPage />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
@@ -87,6 +90,7 @@ export default function App() {
             <Route path="manage" element={<ManageContent />} />
             <Route path="quizzes" element={<ManageQuiz />} />
             <Route path="profile" element={<CreatorProfileSettings />} />
+            <Route path="chat" element={<CreatorChat />} />
           </Route>
 
           {/* Learner Routes Wrapped in the Layout */}

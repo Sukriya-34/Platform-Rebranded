@@ -1,5 +1,6 @@
 import express from "express";
 import prisma from "../db.js";
+import crypto from "crypto";
 
 const router = express.Router();
 
@@ -447,6 +448,106 @@ router.get("/history/:userId", async (req, res) => {
   } catch (error) {
     console.error("History fetch error:", error);
     res.status(500).json({ message: "Failed to load learning history" });
+  }
+});
+
+// --- ESEWA PAYMENT API ---
+const ESEWA_TEST_SECRET = "8gBm/:&EnhH.1/q";
+const ESEWA_PRODUCT_CODE = "EPAYTEST";
+
+router.post("/esewa-signature", async (req, res) => {
+  try {
+    const { courseId, userId, amount } = req.body;
+    
+    // Create unique transaction UUID
+    const transaction_uuid = `${courseId}-${userId}-${Date.now()}`;
+    
+    // Create signature string (amount must not have trailing zeros after decimal if it's an integer, eSewa is strict)
+    // Actually, eSewa requires: total_amount,transaction_uuid,product_code
+    const signatureString = `total_amount=${amount},transaction_uuid=${transaction_uuid},product_code=${ESEWA_PRODUCT_CODE}`;
+    console.log("ESEWA_SIG_DEBUG: Hashing string ->", signatureString);
+    
+    // Hash using HMAC SHA256
+    const hash = crypto.createHmac("sha256", ESEWA_TEST_SECRET)
+                       .update(signatureString)
+                       .digest("base64");
+    console.log("ESEWA_SIG_DEBUG: Generated Hash ->", hash);
+                       
+    res.json({
+      signature: hash,
+      transaction_uuid,
+      amount,
+      product_code: ESEWA_PRODUCT_CODE
+    });
+  } catch (error) {
+    console.error("eSewa Signature Error:", error);
+    res.status(500).json({ message: "Failed to generate payment signature" });
+  }
+});
+
+router.get("/esewa-verify", async (req, res) => {
+  try {
+    const { data } = req.query;
+    if (!data) return res.status(400).send("Missing data payload from eSewa");
+
+    // Decode Base64 data
+    const decodedBuffer = Buffer.from(data, "base64");
+    const decodedString = decodedBuffer.toString("utf-8");
+    const esewaPayload = JSON.parse(decodedString);
+
+    if (esewaPayload.status !== "COMPLETE") {
+      return res.redirect("http://localhost:5173/learner/dashboard?payment=failed");
+    }
+
+    // Verify signature to prevent tampering
+    const { signature, signed_field_names, transaction_uuid } = esewaPayload;
+    
+    // eSewa requires us to dynamically build the string based on the fields they specify
+    const fieldsToSign = signed_field_names.split(',');
+    const signatureString = fieldsToSign.map(field => `${field}=${esewaPayload[field]}`).join(',');
+    
+    const generatedHash = crypto.createHmac("sha256", ESEWA_TEST_SECRET)
+                                .update(signatureString)
+                                .digest("base64");
+
+    if (generatedHash !== signature) {
+      console.error("eSewa Signature Mismatch!");
+      return res.redirect("http://localhost:5173/learner/dashboard?payment=tampered");
+    }
+
+    // Extract courseId and userId from transaction_uuid (format: courseId-userId-timestamp)
+    const parts = transaction_uuid.split("-");
+    if (parts.length < 3) {
+       return res.redirect("http://localhost:5173/learner/dashboard?payment=invalid_uuid");
+    }
+    const courseId = parts.slice(0, parts.length - 2).join("-");
+    const userId = parseInt(parts[parts.length - 2]);
+
+    // Enroll User
+    const existing = await prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId } }
+    });
+
+    if (!existing) {
+      await prisma.enrollment.create({
+        data: { userId, courseId, progress: 0 }
+      });
+      
+      const course = await prisma.course.findUnique({ where: { id: courseId } });
+      await prisma.activityLog.create({
+        data: {
+          userId,
+          action: "ENROLL",
+          metadata: `Purchased and enrolled in course "${course?.title || 'Course'}" via eSewa`
+        }
+      });
+    }
+
+    // Redirect to the course view with success flag
+    res.redirect(`http://localhost:5173/learner/courses/${courseId}?payment=success`);
+  } catch (error) {
+    console.error("eSewa Verify Error:", error);
+    res.redirect("http://localhost:5173/learner/dashboard?payment=error");
   }
 });
 
